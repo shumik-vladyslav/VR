@@ -8,6 +8,7 @@ const STAGES := [
 	preload("res://src/practice/stage2_space_purification.gd"),
 	preload("res://src/practice/stage3_om21.gd"),
 	preload("res://src/practice/stage4_refuge.gd"),
+	preload("res://src/practice/stage5_three_rays.gd"),
 ]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
 const RefugeTree := preload("res://src/practice/refuge_tree.gd")
@@ -16,7 +17,7 @@ const Offering := preload("res://src/practice/offering.gd")
 @export var autostart := true
 @export var start_delay := 2.0
 @export var show_text := true
-## 3D-Датта с лотосом скрыт: в центре древа — Датта с картинки
+## 3D-Датта с лотосом скрыт, пока этап его не проявит (в центре древа — Датта с картинки)
 @export var hide_datta := true
 ## Камера во время практики: по центру, смотрит на древо Прибежища целиком
 @export var camera_position := Vector3(0.0, 2.9, 4.94)
@@ -62,10 +63,12 @@ func _ready() -> void:
 
 	var datta: Node3D = scene.get_node("Gods/Datta")
 	var origin: Node3D = datta.get_node("CameraOrigin")
+	var datta_parts: Array[Node3D] = []
 	if hide_datta:
 		for child in datta.get_children():
 			if child != origin and child is Node3D:
 				child.visible = false
+				datta_parts.append(child)
 	origin.transform = Transform3D.IDENTITY
 	var cam: Camera3D = origin.get_node("MainCamera")
 	# Блики прожекторов в зеркальном полу мигают как битый пиксель; 3D-Датты во время практики нет — блики не нужны
@@ -94,6 +97,7 @@ func _ready() -> void:
 	_fx = PracticeFx.new()
 	add_child(_fx)
 	_fx.tree = tree
+	_fx.datta_parts = datta_parts
 	# сияние святых — за Даттой в центре древа
 	_fx.setup(cam, tree.figure_position("datta") + Vector3(0, 0.25, -0.5))
 	_apply_camera()

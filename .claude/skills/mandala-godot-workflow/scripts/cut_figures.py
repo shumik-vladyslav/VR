@@ -60,8 +60,9 @@ for it in lay["items"]:
         dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
         a_circle = 1 - smoothstep(r - 1.5, r + 1.5, dist)
         # подставка-лотос: эллипс под кругом, фон вырезается по цвету ("base": false — без подставки)
+        # base_dy / base_ry — центр и полувысота эллипса подставки в долях r (у плоских лотосов меньше, чтобы не цеплять фон)
         if it.get("base", True):
-            e = ((xx - cx) / (r * 0.95)) ** 2 + ((yy - (cy + 0.95 * r)) / (r * 0.55)) ** 2
+            e = ((xx - cx) / (r * 0.95)) ** 2 + ((yy - (cy + it.get("base_dy", 0.95) * r)) / (r * it.get("base_ry", 0.55))) ** 2
             lower = (1 - smoothstep(0.7, 1.0, e)) * smoothstep(cy + 0.3 * r, cy + 0.6 * r, yy)
             alpha = np.maximum(a_circle, key * lower)
         else:

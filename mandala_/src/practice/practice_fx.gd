@@ -8,6 +8,7 @@ const AURA_SHADER := preload("res://src/practice/aura.gdshader")
 const VEIL_SHADER := preload("res://src/practice/light_veil.gdshader")
 const BEAM_SHADER := preload("res://src/practice/light_beam.gdshader")
 const PANEL_SHADER := preload("res://src/practice/text_panel.gdshader")
+const RAY_SHADER := preload("res://src/practice/ray_beam.gdshader")
 const OM_GLYPH := preload("res://images/om_glyph.png")
 
 const BEAM_COUNT := 44          # лучей во все стороны
@@ -35,9 +36,34 @@ var center_rays := 0.0
 ## Объёмные лучи из центра большого Ома: яркость и бегущая волна света (0 — у Ома, 1 — конец луча)
 var center_beams := 0.0
 var center_pulse := -1.0
+## Объёмный Даттатрейя: > 0.5 — виден (появляется сразу целиком, прозрачность ломает модель)
+var datta_reveal := 0.0
+## 0..1 — яркий свет на месте Даттатрейи, в котором он появляется и который потом гаснет
+var datta_light := 0.0
+## Три луча благословения от Даттатрейи к практикующему и сдвиг летящих по ним зарядов (растёт со временем)
+var ray_white := 0.0
+var ray_red := 0.0
+var ray_blue := 0.0
+var ray_phase := 0.0
 
 ## Древо Прибежища (refuge_tree.gd), если есть
 var tree: Node3D
+## Части объёмного Даттатрейи, которые проявляются по datta_reveal (пусто — Датта всегда виден)
+var datta_parts: Array[Node3D] = []
+## Откуда у Даттатрейи выходят лучи: межбровье, горло, центр груди (мировые координаты)
+var ray_sources := [Vector3(0.0, 3.12, 0.08), Vector3(0.0, 2.78, 0.06), Vector3(0.0, 2.38, 0.12)]
+## Куда лучи входят в тело практикующего — относительно глаз, с поворотом тела: межбровье, горло, центр груди.
+## Практикующий в сцене примерно в 1.8 раза крупнее человека (глаза на высоте ~2.9 м) — точки в том же масштабе
+## Межбровье — чуть выше и впереди глаз: луч идёт ко лбу под небольшим углом и виден линией, а не точкой
+var ray_targets := [Vector3(0.0, 0.1, -0.2), Vector3(0.0, -0.2, -0.04), Vector3(0.0, -0.62, -0.1)]
+## Толщина лучей: синий заметно шире — с места практикующего он идёт по одной линии с красным и виден вокруг него
+const RAY_RADIUS := [0.012, 0.012, 0.045]
+## С какого расстояния от глаз луч начинает и заканчивает растворяться (белый — раньше, у самого лица)
+const RAY_NEAR_FADE := [Vector2(0.1, 0.28), Vector2(0.06, 0.22), Vector2(0.06, 0.22)]
+## На сколько метров луч проходит сквозь тело за точку входа и там растворяется
+const RAY_PIERCE := 0.6
+const RAY_COLORS := [Color(1.0, 0.98, 0.92), Color(1.0, 0.16, 0.1), Color(0.1, 0.32, 1.0)]
+const RAY_CORE_WHITE := [0.7, 0.45, 0.15]
 
 ## Где знак Ом относительно практикующего: у груди, чуть впереди и ниже глаз (м) — лучи идут как из тела
 var om_offset := Vector3(0.0, -0.3, -0.6)
@@ -57,6 +83,10 @@ var _aura_light: OmniLight3D
 var _veil: MeshInstance3D
 var _title: Label3D
 var _text: Label3D
+var _rays: Array[MeshInstance3D] = []
+var _ray_glows: Array[MeshInstance3D] = []
+var _ray_hits: Array[MeshInstance3D] = []
+var _datta_light: MeshInstance3D
 
 func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_camera = camera
@@ -109,6 +139,49 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_center_light.light_specular = 0.0
 	_beams.add_child(_center_light)
 
+	# Три луча благословения: конус от точки на Даттатрейе к практикующему, у источника — светящаяся точка
+	for i in 3:
+		var ray := MeshInstance3D.new()
+		var c := CylinderMesh.new()
+		c.top_radius = RAY_RADIUS[i]
+		c.bottom_radius = RAY_RADIUS[i]
+		c.height = 1.0
+		c.radial_segments = 16
+		c.rings = 1
+		c.cap_top = false
+		c.cap_bottom = false
+		ray.mesh = c
+		var mat := ShaderMaterial.new()
+		mat.shader = RAY_SHADER
+		mat.set_shader_parameter("color", RAY_COLORS[i])
+		mat.set_shader_parameter("near_fade", RAY_NEAR_FADE[i])
+		mat.set_shader_parameter("core_white", RAY_CORE_WHITE[i])
+		mat.set_shader_parameter("sheath", 1.0 if i == 2 else 0.0)   # синий — «трубка» вокруг красного
+		ray.material_override = mat
+		ray.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(ray)
+		_rays.append(ray)
+		var glow := _quad(AURA_SHADER, Vector2(0.7, 0.7))
+		glow.material_override.set_shader_parameter("color", RAY_COLORS[i])
+		glow.material_override.set_shader_parameter("rays", 0.6)
+		glow.position = ray_sources[i]
+		add_child(glow)
+		_ray_glows.append(glow)
+		# светящаяся точка входа на теле практикующего (видна, если посмотреть вниз; в VR — на своём теле)
+		var hit := _quad(AURA_SHADER, Vector2(0.16, 0.16))
+		hit.material_override.set_shader_parameter("color", RAY_COLORS[i])
+		hit.material_override.set_shader_parameter("rays", 0.0)
+		hit.position = ray_targets[i]
+		_om_pivot.add_child(hit)
+		_ray_hits.append(hit)
+
+	# Свет, в котором появляется Даттатрейя, — перед ним, закрывает его целиком
+	_datta_light = _quad(AURA_SHADER, Vector2(6.5, 6.5))
+	_datta_light.material_override.set_shader_parameter("color", Color(1.0, 0.93, 0.8))
+	_datta_light.material_override.set_shader_parameter("rays", 0.8)
+	_datta_light.position = Vector3(0.0, 2.35, 1.0)
+	add_child(_datta_light)
+
 	# Свет, заполняющий взгляд, — прямо перед камерой, поверх всего
 	_veil = _quad(VEIL_SHADER, Vector2(2, 2))
 	_veil.position = Vector3(0, 0, -0.12)
@@ -143,8 +216,12 @@ func reset() -> void:
 	tree_reveal = 0.0; tree_shine = 0.0
 	center_om = 0.0; center_halo = 0.0; center_rays = 0.0
 	center_beams = 0.0; center_pulse = -1.0
+	datta_reveal = 0.0; datta_light = 0.0
+	ray_white = 0.0; ray_red = 0.0; ray_blue = 0.0; ray_phase = 0.0
 
 func commit() -> void:
+	_commit_datta()
+	_commit_rays()
 	var om := _om.material_override as ShaderMaterial
 	om.set_shader_parameter("intensity", om_intensity)
 	om.set_shader_parameter("halo", om_halo)
@@ -197,6 +274,50 @@ func commit() -> void:
 		l.outline_modulate.a = text_alpha * 0.6
 		l.visible = text_alpha > 0.002
 	_update_panel()
+
+## Объёмный Даттатрейя появляется сразу целиком (этап прячет момент появления в datta_light)
+func _commit_datta() -> void:
+	var l := smoothstep(0.0, 1.0, datta_light)
+	(_datta_light.material_override as ShaderMaterial).set_shader_parameter("intensity", 6.0 * l)
+	_datta_light.visible = l > 0.002
+	var shown := datta_reveal > 0.5
+	for part in datta_parts:
+		part.visible = shown
+
+## Лучи от точек на Даттатрейе к межбровью, горлу и груди практикующего — где бы он ни стоял
+func _commit_rays() -> void:
+	var levels := [ray_white, ray_red, ray_blue]
+	var body := _om_pivot.global_transform
+	for i in 3:
+		var ray := _rays[i]
+		var level: float = levels[i]
+		ray.visible = level > 0.002
+		_ray_glows[i].visible = ray.visible
+		# точку входа в межбровье не показываем: она у самых глаз и заливает светом пол-экрана
+		_ray_hits[i].visible = ray.visible and i > 0
+		if not ray.visible:
+			continue
+		var from: Vector3 = ray_sources[i]
+		var hit: Vector3 = body * (ray_targets[i] as Vector3)
+		# луч входит в тело и проходит его насквозь, за телом растворяется
+		var dir := hit - from
+		var hit_len := dir.length()
+		dir += dir.normalized() * RAY_PIERCE
+		# ось Y цилиндра — к источнику (узкий конец), основание — у практикующего
+		var y := -dir.normalized()
+		var x := y.cross(Vector3.UP if absf(y.y) < 0.95 else Vector3.RIGHT).normalized()
+		var z := x.cross(y)
+		ray.global_transform = Transform3D(Basis(x, y * dir.length(), z), from + dir * 0.5)
+		var m := ray.material_override as ShaderMaterial
+		m.set_shader_parameter("intensity", 3.0 * level)
+		m.set_shader_parameter("phase", ray_phase)
+		m.set_shader_parameter("beam_length", dir.length())
+		m.set_shader_parameter("hit", hit_len / dir.length())
+		(_ray_glows[i].material_override as ShaderMaterial).set_shader_parameter("intensity", 0.9 * level)
+		# точка входа вспыхивает, когда в неё приходит заряд (как в шейдере: заряд — f от 0 до ~0.38)
+		var f := fposmod(hit_len / 1.2 - ray_phase, 1.0)
+		var arrive := smoothstep(0.0, 0.06, f) * (1.0 - smoothstep(0.3, 0.38, f))
+		(_ray_hits[i].material_override as ShaderMaterial).set_shader_parameter("intensity", level * (0.8 + 1.2 * arrive))
 
 ## Плашка под текстом — по размеру заголовка и текста, с полями
 func _update_panel() -> void:

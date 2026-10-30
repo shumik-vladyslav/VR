@@ -6,6 +6,11 @@ extends Node3D
 
 const PARTS_DIR := "res://images/refuge_tree/parts/"
 const PARTS_JSON := "res://images/refuge_tree/parts.json"
+const GLOW_SHADER := preload("res://src/practice/figure_glow.gdshader")
+
+## Свечение за фигурами: всегда чуть-чуть, с shine — сильнее
+@export var glow_base := 0.35
+@export var glow_shine := 0.9
 
 ## Метров на пиксель исходной картинки (в плоскости древа)
 @export var meters_per_pixel := 0.0034
@@ -22,6 +27,8 @@ var shine := 0.0
 var _sprites: Array[Sprite3D] = []
 var _rows: Array[int] = []
 var _base_pos: Array[Vector3] = []
+var _glows: Array[MeshInstance3D] = []
+var _glow_offset: Array[Vector3] = []
 var _row_count := 1
 var _time := 0.0
 
@@ -55,6 +62,23 @@ func build(camera_position: Vector3) -> void:
 		_sprites.append(s)
 		_rows.append(row)
 		_base_pos.append(s.position)
+
+		# лучи сияния чуть позади фигуры (дальше от камеры); фигура занимает ~57% радиуса квада (figure_radius в шейдере)
+		var g := MeshInstance3D.new()
+		var q := QuadMesh.new()
+		var size := maxf(float(p["w"]), float(p["h"])) * s.pixel_size * 1.75
+		q.size = Vector2(size, size)
+		g.mesh = q
+		var mat := ShaderMaterial.new()
+		mat.shader = GLOW_SHADER
+		g.material_override = mat
+		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		g.set_instance_shader_parameter("figure_seed", fmod(float(_sprites.size()) * 0.618034, 1.0))
+		add_child(g)
+		var back := (world - camera_position).normalized() * 0.04
+		g.global_position = world + back
+		_glows.append(g)
+		_glow_offset.append(g.position - s.position)
 	apply()
 
 ## Мировая позиция фигуры по id (например, "datta")
@@ -78,3 +102,9 @@ func apply() -> void:
 		s.modulate = Color(glow, glow, glow, a)
 		# лёгкое «дыхание» — фигуры чуть парят
 		s.position = _base_pos[i] + Vector3(0, 0.012 * sin(_time * 0.6 + float(i) * 1.7), 0)
+		# все фигуры светятся, свет медленно дышит у каждой по-своему
+		var g := _glows[i]
+		g.visible = s.visible
+		g.position = s.position + _glow_offset[i]
+		var breath := 0.85 + 0.15 * sin(_time * 0.18 + float(i) * 2.3)
+		g.set_instance_shader_parameter("glow_strength", a * (glow_base + glow_shine * shine) * breath)
