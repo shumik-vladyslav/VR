@@ -1,9 +1,13 @@
 extends Node3D
 ## Практика «Тантрическая теургия 1»: ведёт этапы по записи, управляет камерой, звуком и эффектами.
 ## Управление: WASD — ходить, мышь — смотреть, Q / E — ниже / выше, Shift — быстрее,
-## → / ← — к следующему / предыдущему шагу, Пробел — пауза, Esc — меню.
+## → / ← — к следующему / предыдущему шагу, 1…9 — перейти к этапу, Пробел — пауза, Esc — меню.
 
-const STAGES := [preload("res://src/practice/stage1_guru_yoga.gd")]
+const STAGES := [
+	preload("res://src/practice/stage1_guru_yoga.gd"),
+	preload("res://src/practice/stage2_space_purification.gd"),
+	preload("res://src/practice/stage3_om21.gd"),
+]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
 const RefugeTree := preload("res://src/practice/refuge_tree.gd")
 
@@ -87,11 +91,12 @@ func _ready() -> void:
 	add_child(_player)
 
 	_delay = start_delay
-	# Для проверки: PRACTICE_T=секунды — сразу перейти к этому месту этапа 1
+	# Для проверки: PRACTICE_T=секунды (и PRACTICE_STAGE=номер этапа) — сразу перейти к этому месту
 	var debug_t := OS.get_environment("PRACTICE_T")
 	if not debug_t.is_empty():
 		_delay = 0.0
-		_start_stage(0, float(debug_t))
+		var debug_stage := OS.get_environment("PRACTICE_STAGE")
+		_start_stage(clampi(int(debug_stage) - 1, 0, STAGES.size() - 1) if not debug_stage.is_empty() else 0, float(debug_t))
 
 func _process(delta: float) -> void:
 	_frames += 1
@@ -116,6 +121,8 @@ func _process(delta: float) -> void:
 		_next_stage()
 		return
 	_stage.apply(_t, _fx)
+	if OS.has_environment("PRACTICE_DEBUG"):
+		print("PRACTICE frame=%d t=%.2f beams=%.2f white=%.2f" % [_frames, _t, _fx.center_beams, _fx.whiteout])
 	if not show_text:
 		_fx.text_alpha = 0.0
 	_fx.commit()
@@ -135,7 +142,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		_pitch = clampf(_pitch - deg_to_rad(event.relative.y * mouse_sensitivity), deg_to_rad(-80), deg_to_rad(80))
 		_apply_camera()
 		return
-	if _stage == null or not (event is InputEventKey) or not event.pressed or event.echo:
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	# Цифры 1…9 (в том числе на цифровой клавиатуре) — перейти к началу этапа
+	var digit := -1
+	if event.physical_keycode >= KEY_1 and event.physical_keycode <= KEY_9:
+		digit = event.physical_keycode - KEY_1
+	elif event.physical_keycode >= KEY_KP_1 and event.physical_keycode <= KEY_KP_9:
+		digit = event.physical_keycode - KEY_KP_1
+	if digit >= 0:
+		if digit < STAGES.size():
+			_start_stage(digit, 0.0)
+		return
+	if _stage == null:
 		return
 	match event.physical_keycode:
 		KEY_RIGHT:
@@ -145,8 +164,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_SPACE:
 			_set_paused(not _paused)
 
-## Мышь захвачена и меню закрыто — можно ходить и смотреть
+## Мышь захвачена и меню закрыто — можно ходить и смотреть (в тестовых запусках с PRACTICE_T — нет)
 func _looking() -> bool:
+	if not OS.get_environment("PRACTICE_T").is_empty():
+		return false
 	return Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not (_menu and _menu.get("IsOpened"))
 
 func _move(delta: float) -> void:
@@ -182,6 +203,7 @@ func _start_stage(index: int, at: float) -> void:
 	_stop_background_music()
 	_stage_index = index
 	_stage = STAGES[index].new()
+	_fx.reset()
 	_finished = false
 	_paused = false
 	_t = at

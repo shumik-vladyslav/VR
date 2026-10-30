@@ -10,6 +10,13 @@ uniform float halo : hint_range(0.0, 2.0) = 1.0;        // пятицветно�
 uniform float rays_out : hint_range(0.0, 2.0) = 0.0;    // лучи от знака во все стороны
 uniform float rays_in : hint_range(0.0, 2.0) = 0.0;     // лучи к знаку из пространства
 uniform vec4 glyph_color : source_color = vec4(1.0, 0.85, 0.45, 1.0);
+uniform bool billboard = false;     // всегда лицом к зрителю (большой Ом в центре)
+
+void vertex() {
+	if (billboard) {
+		MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	}
+}
 
 // Пять цветов: белый, жёлтый, красный, зелёный, синий
 const vec3 FIVE[5] = vec3[5](
