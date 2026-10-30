@@ -7,6 +7,7 @@ const STAGES := [
 	preload("res://src/practice/stage1_guru_yoga.gd"),
 	preload("res://src/practice/stage2_space_purification.gd"),
 	preload("res://src/practice/stage3_om21.gd"),
+	preload("res://src/practice/stage4_refuge.gd"),
 ]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
 const RefugeTree := preload("res://src/practice/refuge_tree.gd")
