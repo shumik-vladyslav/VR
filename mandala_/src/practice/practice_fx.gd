@@ -20,6 +20,11 @@ var whiteout := 0.0
 var title := ""
 var text := ""
 var text_alpha := 0.0
+var tree_reveal := 0.0
+var tree_shine := 0.0
+
+## Древо Прибежища (refuge_tree.gd), если есть
+var tree: Node3D
 
 var _om: MeshInstance3D
 var _aura: MeshInstance3D
@@ -32,12 +37,12 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	# Знак Ом — в нижней части поля зрения, «в груди»
 	_om = _quad(OM_EMBLEM_SHADER, Vector2(2.4, 2.4))
 	_om.material_override.set_shader_parameter("glyph", OM_GLYPH)
-	_om.material_override.set_shader_parameter("glyph_size", 0.17)
-	_om.position = Vector3(0, -0.6, -1.5)
+	_om.material_override.set_shader_parameter("glyph_size", 0.13)
+	_om.position = Vector3(0, -0.95, -1.5)
 	camera.add_child(_om)
 
 	# Сияние за Даттой
-	_aura = _quad(AURA_SHADER, Vector2(8, 8))
+	_aura = _quad(AURA_SHADER, Vector2(6, 6))
 	_aura.position = aura_position
 	add_child(_aura)
 	_aura_light = OmniLight3D.new()
@@ -52,11 +57,11 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_veil.material_override.render_priority = 100
 	camera.add_child(_veil)
 
-	_title = _label(64)
-	_title.position = Vector3(0, 1.62, -2.4)
+	_title = _label(52)
+	_title.position = Vector3(0, 1.74, -2.4)
 	camera.add_child(_title)
-	_text = _label(40)
-	_text.position = Vector3(0, 1.45, -2.4)
+	_text = _label(36)
+	_text.position = Vector3(0, 1.64, -2.4)
 	_text.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	camera.add_child(_text)
 	commit()
@@ -79,6 +84,10 @@ func commit() -> void:
 	veil.set_shader_parameter("fill_alpha", veil_alpha)
 	veil.set_shader_parameter("whiteout", whiteout)
 	_veil.visible = veil_alpha * veil_fill > 0.002 or whiteout > 0.002
+
+	if tree:
+		tree.reveal = tree_reveal
+		tree.shine = tree_shine
 
 	_title.text = title
 	_text.text = text

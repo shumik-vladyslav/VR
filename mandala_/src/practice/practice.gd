@@ -4,14 +4,18 @@ extends Node3D
 
 const STAGES := [preload("res://src/practice/stage1_guru_yoga.gd")]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
+const RefugeTree := preload("res://src/practice/refuge_tree.gd")
 
 @export var autostart := true
 @export var start_delay := 2.0
 @export var show_text := true
-## Камера во время практики: по центру напротив Датты
-@export var camera_position := Vector3(0.0, 2.05, 4.4)
-@export var camera_target := Vector3(0.0, 1.8, -0.36)
-@export var aura_position := Vector3(0.0, 2.3, -1.4)
+## 3D-Датта с лотосом скрыт: в центре древа — Датта с картинки
+@export var hide_datta := true
+## Камера во время практики: по центру, смотрит на древо Прибежища целиком
+@export var camera_position := Vector3(0.0, 2.9, 4.94)
+@export var camera_target := Vector3(0.0, 2.77, -0.36)
+## Низ древа (подставка коренного Гуру), по центру лотоса
+@export var tree_position := Vector3(0.0, 0.35, -0.36)
 
 var _fx
 var _player: AudioStreamPlayer
@@ -31,15 +35,27 @@ func _ready() -> void:
 	scene.set_physics_process(false)
 	_menu = scene.get_node_or_null("Menu")
 
-	var origin: Node3D = scene.get_node("Gods/Datta/CameraOrigin")
+	var datta: Node3D = scene.get_node("Gods/Datta")
+	var origin: Node3D = datta.get_node("CameraOrigin")
+	if hide_datta:
+		for child in datta.get_children():
+			if child != origin and child is Node3D:
+				child.visible = false
 	origin.transform = Transform3D.IDENTITY
 	var cam: Camera3D = origin.get_node("MainCamera")
 	cam.global_position = camera_position
 	cam.look_at(camera_target, Vector3.UP)
 
+	var tree := RefugeTree.new()
+	add_child(tree)
+	tree.global_position = tree_position
+	tree.build(camera_position)
+
 	_fx = PracticeFx.new()
 	add_child(_fx)
-	_fx.setup(cam, aura_position)
+	_fx.tree = tree
+	# сияние святых — за Даттой в центре древа
+	_fx.setup(cam, tree.figure_position("datta") + Vector3(0, 0.25, -0.5))
 
 	_player = AudioStreamPlayer.new()
 	add_child(_player)
@@ -63,8 +79,10 @@ func _process(delta: float) -> void:
 		return
 
 	if not _paused:
-		if _player.playing:
-			_t = _player.get_playback_position() + AudioServer.get_time_since_last_mix()
+		var pos := _player.get_playback_position() + AudioServer.get_time_since_last_mix()
+		# по окончании записи плеер на кадр отдаёт позицию 0 — время практики назад само не идёт
+		if _player.playing and pos >= _t - 0.25:
+			_t = pos
 		else:
 			_t += delta
 	if _t >= _stage.DURATION:
@@ -111,7 +129,8 @@ func _next_stage() -> void:
 	_stage = null
 	_finished = true
 	_fx.om_intensity = 0.0; _fx.om_halo = 0.0; _fx.rays_out = 0.0; _fx.rays_in = 0.0
-	_fx.aura = 0.0; _fx.veil_alpha = 0.0; _fx.whiteout = 0.0
+	_fx.veil_alpha = 0.0; _fx.whiteout = 0.0
+	_fx.tree_shine = 0.0   # древо и сияние остаются
 	_fx.title = ""
 	_fx.text = ""
 	_fx.text_alpha = 0.0
