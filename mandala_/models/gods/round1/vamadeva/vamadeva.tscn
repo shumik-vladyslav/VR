@@ -1,0 +1,21 @@
+[gd_scene load_steps=5 format=3 uid="uid://b0h12f3thtss2"]
+
+[ext_resource type="PackedScene" uid="uid://dfxly2j03jac7" path="res://models/gods/round1/vamadeva/Vamadeva.glb" id="1_n0pt6"]
+[ext_resource type="Script" path="res://src/SelectableObject.cs" id="2_cry1i"]
+[ext_resource type="PackedScene" uid="uid://mp78edh1wimh" path="res://models/gods/round1/vamadeva/lotos.tscn" id="2_pmkt8"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_fyhyd"]
+radius = 3.15728
+height = 9.10364
+
+[node name="Vamadeva" instance=ExtResource("1_n0pt6")]
+script = ExtResource("2_cry1i")
+Name = "Вамадева"
+
+[node name="Lotos" parent="." index="0" instance=ExtResource("2_pmkt8")]
+
+[node name="Area3D" type="Area3D" parent="." index="30"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.43963, 0)
+shape = SubResource("CapsuleShape3D_fyhyd")

@@ -1,0 +1,8 @@
+# Unreal-версия проекта хранится отдельно (Plastic SCM), в этот репозиторий не входит
+/mandala/
+
+# Личные настройки IDE
+*.DotSettings.user
+.idea/
+.vs/
+Thumbs.db

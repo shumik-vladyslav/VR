@@ -1,0 +1,13 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://models/gods/teurgia1/others/textures/custom1_albedo.png" id="1_tytw7"]
+
+[resource]
+resource_name = "Material.107"
+transparency = 4
+cull_mode = 2
+albedo_texture = ExtResource("1_tytw7")
+roughness = 0.5
+emission_enabled = true
+emission = Color(1, 0.787219, 0.418445, 1)
+emission_energy_multiplier = 3.2

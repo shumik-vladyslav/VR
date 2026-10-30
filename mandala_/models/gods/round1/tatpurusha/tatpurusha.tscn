@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://bj8e3l0a7ywyy"]
+
+[ext_resource type="PackedScene" uid="uid://bbbsxp635es4i" path="res://models/gods/round1/tatpurusha/Tatpurusha.glb" id="1_me8so"]
+[ext_resource type="Script" path="res://src/SelectableObject.cs" id="2_w56b3"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_71308"]
+radius = 4.29301
+height = 10.6325
+
+[node name="Tatpurusha" instance=ExtResource("1_me8so")]
+script = ExtResource("2_w56b3")
+Name = "Татпуруша"
+
+[node name="Area3D" type="Area3D" parent="." index="24"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.02756, 0)
+shape = SubResource("CapsuleShape3D_71308")

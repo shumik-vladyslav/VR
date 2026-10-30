@@ -1,0 +1,17 @@
+[gd_resource type="StandardMaterial3D" load_steps=4 format=3 uid="uid://cvoftwv5kuc77"]
+
+[ext_resource type="Texture2D" uid="uid://hkyl3msmvgi3" path="res://models/gods/round1/aghora/Aghora_Ucupaint Stone 02_10.png" id="1_ebjqv"]
+[ext_resource type="Texture2D" uid="uid://bfapeca8jcqv5" path="res://models/gods/round1/aghora/Aghora_Ucupaint Stone 02_11.png" id="2_ocjb3"]
+[ext_resource type="Texture2D" uid="uid://bud135keerrdd" path="res://models/gods/round1/aghora/Aghora_Ucupaint Stone 02.png" id="3_fksmy"]
+
+[resource]
+resource_name = "Stone 02.001"
+cull_mode = 2
+albedo_texture = ExtResource("1_ebjqv")
+metallic = 1.0
+metallic_texture = ExtResource("2_ocjb3")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("2_ocjb3")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("3_fksmy")

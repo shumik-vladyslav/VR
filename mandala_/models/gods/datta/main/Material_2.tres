@@ -1,0 +1,23 @@
+[gd_resource type="StandardMaterial3D" load_steps=4 format=3 uid="uid://cg50isaqq4c74"]
+
+[ext_resource type="Texture2D" uid="uid://cum6iaxxtomqg" path="res://models/gods/datta/main/textures/Datta_low_Material_2_BaseMap.1001.tga" id="1_2718e"]
+[ext_resource type="Texture2D" uid="uid://bgngevnr5asdj" path="res://models/gods/datta/main/textures/Datta_low_Material_2_Normal.1001.tga" id="2_2k7e2"]
+[ext_resource type="Texture2D" uid="uid://bspyd734ot2r4" path="res://models/gods/datta/main/textures/Datta_low_Material_2_MaskMap.1001.tga" id="2_28j4v"]
+
+[resource]
+resource_name = "Material_2"
+cull_mode = 2
+albedo_color = Color(0.906332, 0.906332, 0.906332, 1)
+albedo_texture = ExtResource("1_2718e")
+metallic = 0.93
+metallic_specular = 0.12
+metallic_texture = ExtResource("2_28j4v")
+roughness = 0.78
+roughness_texture = ExtResource("2_28j4v")
+roughness_texture_channel = 3
+normal_enabled = true
+normal_texture = ExtResource("2_2k7e2")
+ao_enabled = true
+ao_light_affect = 1.0
+ao_texture = ExtResource("2_28j4v")
+ao_texture_channel = 1

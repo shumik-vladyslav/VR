@@ -1,0 +1,23 @@
+[gd_resource type="StandardMaterial3D" load_steps=4 format=3 uid="uid://cfueihdq3r873"]
+
+[ext_resource type="Texture2D" path="res://models/gods/teurgia1/main/textures/Datta_low_Material_1_BaseMap_skin.png" id="1_qsw6k"]
+[ext_resource type="Texture2D" path="res://models/gods/teurgia1/main/textures/Datta_low_Material_1_Normal_skin.png" id="2_5vj7w"]
+[ext_resource type="Texture2D" uid="uid://bajs213n4c3cv" path="res://models/gods/teurgia1/main/textures/Datta_low_Material_1_MaskMap.1001.tga" id="2_hnfws"]
+
+[resource]
+resource_name = "Material_1"
+cull_mode = 2
+albedo_color = Color(0.906332, 0.906332, 0.906332, 1)
+albedo_texture = ExtResource("1_qsw6k")
+metallic = 0.28
+metallic_specular = 0.39
+metallic_texture = ExtResource("2_hnfws")
+roughness_texture = ExtResource("2_hnfws")
+roughness_texture_channel = 3
+emission = Color(0.439049, 0.439049, 0.439049, 1)
+normal_enabled = true
+normal_texture = ExtResource("2_5vj7w")
+ao_enabled = true
+ao_light_affect = 1.0
+ao_texture = ExtResource("2_hnfws")
+ao_texture_channel = 1

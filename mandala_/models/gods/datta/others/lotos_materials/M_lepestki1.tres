@@ -1,0 +1,33 @@
+[gd_resource type="ShaderMaterial" load_steps=8 format=3 uid="uid://c5mt0eed4xhx7"]
+
+[ext_resource type="Shader" path="res://models/gods/datta/others/lotos_materials/lepestki1.gdshader" id="1_vwnfm"]
+[ext_resource type="Texture2D" uid="uid://oko57ax330u2" path="res://models/gods/datta/others/lotos_materials/textures/albedo.png" id="2_7cdeh"]
+[ext_resource type="Texture2D" uid="uid://p5pp5madivl5" path="res://models/gods/datta/others/lotos_materials/textures/mask1.png" id="2_uwt87"]
+[ext_resource type="Texture2D" uid="uid://bnqlxkuww3g4l" path="res://models/gods/datta/others/lotos_materials/textures/mask2.png" id="3_hfckd"]
+[ext_resource type="Texture2D" uid="uid://dvmoj05o56gf4" path="res://models/gods/datta/others/lotos_materials/textures/mask3.png" id="4_wb0uw"]
+[ext_resource type="Texture2D" uid="uid://c8kmfujcus7qr" path="res://models/gods/datta/others/lotos_materials/textures/mask4.png" id="5_07uvm"]
+[ext_resource type="Texture2D" uid="uid://3dmfcaru4s0u" path="res://models/gods/datta/others/lotos_materials/textures/mask5.png" id="6_dgm6k"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_vwnfm")
+shader_parameter/tint1 = Color(0.819608, 0.647059, 0.215686, 1)
+shader_parameter/tint2 = Color(0.509804, 0.341176, 0.313726, 1)
+shader_parameter/tint3 = Color(0.729412, 0.639216, 0.568627, 1)
+shader_parameter/tint4 = Color(0.839216, 0.611765, 0.286275, 1)
+shader_parameter/tint5 = Color(0.6, 0.501961, 0.141176, 1)
+shader_parameter/factorMask1 = 1.56
+shader_parameter/factorMask2 = 1.0
+shader_parameter/factorMask3 = 1.0
+shader_parameter/factorMask4 = 2.02
+shader_parameter/factorMask5 = 1.0
+shader_parameter/refraction = 6.269
+shader_parameter/emissionValue = 3.5
+shader_parameter/metalic = 0.62
+shader_parameter/roughness = 0.1
+shader_parameter/albedo = ExtResource("2_7cdeh")
+shader_parameter/mask1 = ExtResource("2_uwt87")
+shader_parameter/mask2 = ExtResource("3_hfckd")
+shader_parameter/mask3 = ExtResource("4_wb0uw")
+shader_parameter/mask4 = ExtResource("5_07uvm")
+shader_parameter/mask5 = ExtResource("6_dgm6k")

@@ -1,0 +1,21 @@
+[gd_resource type="ShaderMaterial" load_steps=5 format=3 uid="uid://0el7cw4a7x4m"]
+
+[ext_resource type="Shader" path="res://models/gods/datta/others/lotos_materials/lepestki2.gdshader" id="1_1alcr"]
+[ext_resource type="Texture2D" uid="uid://oko57ax330u2" path="res://models/gods/datta/others/lotos_materials/textures/albedo.png" id="2_k0fuh"]
+[ext_resource type="Texture2D" uid="uid://cppkfo2u6hywo" path="res://models/gods/datta/others/lotos_materials/textures/low_mask1.png" id="3_bihj8"]
+[ext_resource type="Texture2D" uid="uid://dmt0bvdwuh8p" path="res://models/gods/datta/others/lotos_materials/textures/low_mask2.png" id="4_7g3ll"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_1alcr")
+shader_parameter/tint1 = Color(1, 0.54902, 0.133333, 1)
+shader_parameter/tint2 = Color(0.788235, 0.266667, 0.266667, 1)
+shader_parameter/factorMask1 = 0.63
+shader_parameter/factorMask2 = 0.74
+shader_parameter/emissionValue = 1.8
+shader_parameter/metalic = 0.641
+shader_parameter/roughness = 0.207
+shader_parameter/refraction = null
+shader_parameter/albedo = ExtResource("2_k0fuh")
+shader_parameter/mask1 = ExtResource("3_bihj8")
+shader_parameter/mask2 = ExtResource("4_7g3ll")

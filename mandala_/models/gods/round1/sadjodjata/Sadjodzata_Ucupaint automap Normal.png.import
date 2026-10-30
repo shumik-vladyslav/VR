@@ -1,0 +1,38 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://mtvcdc3qmwge"
+path.s3tc="res://.godot/imported/Sadjodzata_Ucupaint automap Normal.png-992d96cfeaf4b99548c382d95fc828af.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "dad9d8be0c036525841a9a73369dfed8"
+}
+
+[deps]
+
+source_file="res://models/gods/round1/sadjodjata/Sadjodzata_Ucupaint automap Normal.png"
+dest_files=["res://.godot/imported/Sadjodzata_Ucupaint automap Normal.png-992d96cfeaf4b99548c382d95fc828af.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=1
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=1
+roughness/src_normal="res://models/gods/round1/sadjodjata/Sadjodzata_Ucupaint automap Normal.png"
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

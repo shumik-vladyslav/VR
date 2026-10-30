@@ -1,0 +1,18 @@
+[gd_resource type="StandardMaterial3D" load_steps=4 format=3 uid="uid://dw3iex3bw6yom"]
+
+[ext_resource type="Texture2D" uid="uid://dbsnqtt1ge8a" path="res://models/gods/round1/aghora/Material.012 Color.png" id="1_vi5ev"]
+[ext_resource type="Texture2D" uid="uid://dd8yh3fba0lod" path="res://models/gods/round1/aghora/Aghora_Ucupaint Material-Ucupaint Material_5.png" id="2_qm4tg"]
+[ext_resource type="Texture2D" uid="uid://bvxhix8fe2ksp" path="res://models/gods/round1/aghora/Aghora_Ucupaint Material_3.png" id="3_fpdt4"]
+
+[resource]
+resource_name = "Material.012"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("1_vi5ev")
+metallic = 1.0
+metallic_texture = ExtResource("2_qm4tg")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("2_qm4tg")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("3_fpdt4")

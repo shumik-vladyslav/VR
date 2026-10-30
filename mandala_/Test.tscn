@@ -1,0 +1,62 @@
+[gd_scene load_steps=8 format=3 uid="uid://v55bdslfwjv1"]
+
+[ext_resource type="Script" path="res://src/Mandala5.cs" id="1_nsn6m"]
+[ext_resource type="PackedScene" uid="uid://dhjwi5p3e2rjn" path="res://src/camera/camera.tscn" id="1_qnahd"]
+[ext_resource type="Script" path="res://src/SelectableObject.cs" id="3_ef0je"]
+[ext_resource type="PackedScene" uid="uid://b0ufbyu8r246r" path="res://src/selectable_menu/selectable_menu.tscn" id="4_yd8ye"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_prb7n"]
+radius = 1.113
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_wcqgs"]
+radius = 1.727
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_gyutd"]
+radius = 1.727
+
+[node name="Test" type="Node3D" node_paths=PackedStringArray("_selectable", "Vectors")]
+script = ExtResource("1_nsn6m")
+_selectable = NodePath("Selectable")
+Vectors = []
+
+[node name="SelectableMenu" parent="." instance=ExtResource("4_yd8ye")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Camera" parent="." node_paths=PackedStringArray("CameraTarget") instance=ExtResource("1_qnahd")]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.0626, 0.56665, -4.22565)
+CameraTarget = NodePath("../Selectable/Center")
+
+[node name="Selectable" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Center" type="CSGSphere3D" parent="Selectable"]
+script = ExtResource("3_ef0je")
+Name = "Центр"
+
+[node name="Area3D" type="Area3D" parent="Selectable/Center"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Selectable/Center/Area3D"]
+shape = SubResource("SphereShape3D_prb7n")
+
+[node name="Vasya" type="CSGBox3D" parent="Selectable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.462, 9.53674e-07, -11.4208)
+script = ExtResource("3_ef0je")
+Name = "Вася"
+
+[node name="Area3D" type="Area3D" parent="Selectable/Vasya"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Selectable/Vasya/Area3D"]
+shape = SubResource("SphereShape3D_wcqgs")
+
+[node name="Petya" type="CSGBox3D" parent="Selectable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.0626, 0.56665, -4.22565)
+size = Vector3(1, 2.1333, 1)
+script = ExtResource("3_ef0je")
+Name = "Петя"
+
+[node name="Area3D" type="Area3D" parent="Selectable/Petya"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Selectable/Petya/Area3D"]
+shape = SubResource("SphereShape3D_gyutd")

@@ -1,0 +1,38 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://fkjhc87t6xuw"
+path.bptc="res://.godot/imported/Tatpurusha_Ucupaint material1 Metallic.png-1b812278d9f4ad0cb8aef44a8611d608.bptc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "0b63fde0f04a5425d15cc2d27e5168c1"
+}
+
+[deps]
+
+source_file="res://models/gods/round1/tatpurusha/Tatpurusha_Ucupaint material1 Metallic.png"
+dest_files=["res://.godot/imported/Tatpurusha_Ucupaint material1 Metallic.png-1b812278d9f4ad0cb8aef44a8611d608.bptc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=true
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

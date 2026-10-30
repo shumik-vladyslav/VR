@@ -1,0 +1,124 @@
+[gd_scene load_steps=16 format=3 uid="uid://bxvneeyibo8ai"]
+
+[ext_resource type="Script" path="res://src/Scene.cs" id="1_t46rm"]
+[ext_resource type="PackedScene" uid="uid://dbasempda12l7" path="res://models/gods/datta/Shkura.glb" id="2_5dsuy"]
+[ext_resource type="PackedScene" uid="uid://bt3p356gifewf" path="res://models/gods/datta/rose/rose.tscn" id="6_2vhtg"]
+[ext_resource type="PackedScene" uid="uid://yymb1qytfsrn" path="res://models/gods/datta/mala/mala.tscn" id="7_okqp2"]
+[ext_resource type="PackedScene" uid="uid://bx4tvsu2kcee2" path="res://models/gods/datta/main/datta.tscn" id="8_ijwad"]
+[ext_resource type="PackedScene" uid="uid://dstwmgjj2wrax" path="res://models/gods/datta/others/chetki.tscn" id="9_kp3vm"]
+[ext_resource type="PackedScene" uid="uid://cl0x21ynhbyfq" path="res://models/gods/datta/others/lotos.tscn" id="10_6ay2v"]
+[ext_resource type="PackedScene" uid="uid://6rflgefco8bd" path="res://models/gods/datta/others/tilaki.tscn" id="11_33425"]
+[ext_resource type="Texture2D" uid="uid://dbtwtehb8d542" path="res://textures/Nebula 4 4k.hdr" id="12_fuw5e"]
+[ext_resource type="PackedScene" uid="uid://bpniq2cl4sq8n" path="res://src/menu/menu_layer.tscn" id="14_qfjil"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_q240f"]
+height = 0.891521
+radius = 2.21308
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_wlnbg"]
+panorama = ExtResource("12_fuw5e")
+energy_multiplier = 14.03
+
+[sub_resource type="Sky" id="Sky_2nxda"]
+sky_material = SubResource("PanoramaSkyMaterial_wlnbg")
+
+[sub_resource type="Environment" id="Environment_s568m"]
+background_mode = 2
+background_energy_multiplier = 0.6
+sky = SubResource("Sky_2nxda")
+sky_custom_fov = 76.0
+ambient_light_source = 1
+ambient_light_sky_contribution = 0.0
+ambient_light_energy = 0.0
+reflected_light_source = 2
+ssr_enabled = true
+ssao_enabled = true
+ssil_enabled = true
+ssil_intensity = 8.49
+sdfgi_read_sky_light = false
+sdfgi_energy = 0.125
+glow_enabled = true
+glow_normalized = true
+glow_intensity = 8.0
+glow_strength = 0.63
+glow_bloom = 0.18
+fog_light_energy = 0.92
+volumetric_fog_density = 0.0076
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_fnxgm"]
+
+[node name="Scene" type="Node3D"]
+script = ExtResource("1_t46rm")
+MaxPitchHighAngle = 10.0
+MaxPitchLowAngle = -40.0
+RotationSpeed = 0.03
+
+[node name="Gods" type="Node3D" parent="."]
+
+[node name="Datta" type="Node3D" parent="Gods"]
+
+[node name="Shkura" parent="Gods/Datta" instance=ExtResource("2_5dsuy")]
+
+[node name="rose" parent="Gods/Datta" instance=ExtResource("6_2vhtg")]
+
+[node name="mala" parent="Gods/Datta" instance=ExtResource("7_okqp2")]
+
+[node name="datta" parent="Gods/Datta" instance=ExtResource("8_ijwad")]
+
+[node name="chetki" parent="Gods/Datta" instance=ExtResource("9_kp3vm")]
+
+[node name="lotos" parent="Gods/Datta" instance=ExtResource("10_6ay2v")]
+
+[node name="Area3D" type="Area3D" parent="Gods/Datta/lotos"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Gods/Datta/lotos/Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.346213, 0)
+shape = SubResource("CylinderShape3D_q240f")
+
+[node name="tilaki" parent="Gods/Datta" instance=ExtResource("11_33425")]
+
+[node name="CameraOrigin" type="Node3D" parent="Gods/Datta"]
+unique_name_in_owner = true
+
+[node name="MainCamera" type="Camera3D" parent="Gods/Datta/CameraOrigin"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 0.97437, 0.224951, 0, -0.224951, 0.97437, 0, 2.377, 4.143)
+
+[node name="SpotLight3D" type="SpotLight3D" parent="Gods/Datta/CameraOrigin/MainCamera"]
+light_color = Color(0.836883, 0.624446, 0.271493, 1)
+light_energy = 1.988
+light_size = 0.375
+light_specular = 0.0
+spot_attenuation = 1.89
+
+[node name="SpotLight3D2" type="SpotLight3D" parent="Gods/Datta/CameraOrigin/MainCamera"]
+transform = Transform3D(0.588858, 0.181814, -0.787522, -0.181814, 0.979195, 0.0901164, 0.787522, 0.0901164, 0.609663, -4.79524, 0.267998, -1.16083)
+light_color = Color(0.835294, 0.623529, 0.270588, 1)
+light_energy = 5.239
+light_specular = 0.0
+spot_range = 10.039
+
+[node name="SpotLight3D3" type="SpotLight3D" parent="Gods/Datta/CameraOrigin/MainCamera"]
+transform = Transform3D(0.644978, -0.171908, 0.744615, 0.171908, 0.982035, 0.0778158, -0.744615, 0.0778157, 0.662943, 3.45496, 0.361798, -1.56712)
+light_color = Color(0.835294, 0.623529, 0.270588, 1)
+light_energy = 5.784
+light_specular = 0.0
+spot_range = 9.676
+
+[node name="Environment" type="Node3D" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Environment"]
+transform = Transform3D(1, 0, 0, 0, 0.639332, 0.768931, 0, -0.768931, 0.639332, 0, 1.65906, 5.37463)
+light_energy = 0.51
+shadow_enabled = true
+shadow_opacity = 0.35
+shadow_blur = 0.594
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Environment"]
+environment = SubResource("Environment_s568m")
+camera_attributes = SubResource("CameraAttributesPractical_fnxgm")
+
+[node name="Menu" parent="." instance=ExtResource("14_qfjil")]
+unique_name_in_owner = true
+IsStartMandalaShown = true
+IsStartTeurgia1Shown = true

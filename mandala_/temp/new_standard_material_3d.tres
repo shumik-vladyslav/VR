@@ -1,0 +1,28 @@
+[gd_resource type="StandardMaterial3D" load_steps=5 format=3 uid="uid://c5cj2vhepx015"]
+
+[ext_resource type="Texture2D" uid="uid://brksoh3y5g51j" path="res://models/gods/datta/main/textures/Datta_low_Material_1_BaseMap.1001.tga" id="1_kmmd1"]
+[ext_resource type="Texture2D" uid="uid://bgngevnr5asdj" path="res://models/gods/datta/main/textures/Datta_low_Material_2_Normal.1001.tga" id="2_l8cq8"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_8mg71"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_lohvm"]
+noise = SubResource("FastNoiseLite_8mg71")
+
+[resource]
+albedo_color = Color(0.32549, 1, 1, 1)
+albedo_texture = ExtResource("1_kmmd1")
+metallic = 0.29
+roughness = 0.58
+emission_enabled = true
+emission_energy_multiplier = 2.35
+normal_enabled = true
+normal_texture = ExtResource("2_l8cq8")
+rim_enabled = true
+rim = 0.55
+clearcoat_enabled = true
+clearcoat = 0.67
+subsurf_scatter_enabled = true
+subsurf_scatter_strength = 0.26
+refraction_enabled = true
+refraction_scale = 0.38
+refraction_texture = SubResource("NoiseTexture2D_lohvm")

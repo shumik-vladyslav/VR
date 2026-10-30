@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://bs0c7e4acwv2s"]
+
+[ext_resource type="Script" path="res://src/AudioManager.cs" id="1_ngsgk"]
+
+[node name="AudioPlayer" type="Node"]
+script = ExtResource("1_ngsgk")
+
+[node name="Player" type="AudioStreamPlayer" parent="."]
+unique_name_in_owner = true

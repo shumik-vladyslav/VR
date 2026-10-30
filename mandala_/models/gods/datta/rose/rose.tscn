@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3 uid="uid://bt3p356gifewf"]
+
+[ext_resource type="PackedScene" uid="uid://duhmwl6d5p8v7" path="res://models/gods/datta/rose/rose.glb" id="1_t2wyy"]
+
+[node name="rose" instance=ExtResource("1_t2wyy")]

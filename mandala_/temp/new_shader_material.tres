@@ -1,0 +1,17 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://svjnrolpqa2e"]
+
+[ext_resource type="Shader" uid="uid://w71rkh2whsjt" path="res://temp/new_shader.tres" id="1_ijkbh"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_ijkbh")
+shader_parameter/albedo = null
+shader_parameter/point_size = null
+shader_parameter/roughness = null
+shader_parameter/metallic_texture_channel = Vector4(0.045, 0, 0, 0)
+shader_parameter/specular = 0.455
+shader_parameter/metallic = null
+shader_parameter/uv1_scale = null
+shader_parameter/uv1_offset = null
+shader_parameter/uv2_scale = null
+shader_parameter/uv2_offset = null

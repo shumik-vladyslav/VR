@@ -1,0 +1,19 @@
+[gd_resource type="StandardMaterial3D" load_steps=4 format=3 uid="uid://dxpgrw5spti4b"]
+
+[ext_resource type="Texture2D" uid="uid://b6x156qu6v2ym" path="res://models/gods/round1/tatpurusha/Tatpurusha_Ucupaint material1 Color.png" id="1_wlxqv"]
+[ext_resource type="Texture2D" uid="uid://fkjhc87t6xuw" path="res://models/gods/round1/tatpurusha/Tatpurusha_Ucupaint material1 Metallic.png" id="2_yqp6f"]
+[ext_resource type="Texture2D" uid="uid://fm3b1ciqmx8i" path="res://models/gods/round1/tatpurusha/Tatpurusha_Ucupaint material1 Normal.png" id="3_6sjlj"]
+
+[resource]
+resource_name = "material1"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_color = Color(0.921569, 0.921569, 0.921569, 1)
+albedo_texture = ExtResource("1_wlxqv")
+metallic = 1.0
+metallic_texture = ExtResource("2_yqp6f")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("2_yqp6f")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("3_6sjlj")

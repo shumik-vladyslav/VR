@@ -1,0 +1,10 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://models/gods/teurgia1/others/textures/Tilaka2.png" id="1_vir4p"]
+
+[resource]
+resource_name = "Material.034"
+transparency = 4
+cull_mode = 2
+albedo_texture = ExtResource("1_vir4p")
+roughness = 0.5

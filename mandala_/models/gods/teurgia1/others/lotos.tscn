@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="PackedScene" path="res://models/gods/teurgia1/others/lotos.glb" id="1_bousn"]
+[ext_resource type="Material" path="res://models/gods/teurgia1/others/lotos_materials/M_lepestki1.tres" id="2_7akmm"]
+[ext_resource type="Material" path="res://models/gods/teurgia1/others/lotos_materials/M_lepestki2.tres" id="3_fbaxx"]
+[ext_resource type="Material" path="res://models/gods/teurgia1/others/lotos_materials/M_core.tres" id="4_km48t"]
+
+[node name="lotos" instance=ExtResource("1_bousn")]
+
+[node name="lepestok_001" parent="." index="0"]
+surface_material_override/0 = ExtResource("2_7akmm")
+
+[node name="lepestok_002" parent="." index="1"]
+surface_material_override/0 = ExtResource("2_7akmm")
+
+[node name="lepestok_003" parent="." index="2"]
+surface_material_override/0 = ExtResource("2_7akmm")
+
+[node name="lepestok_004" parent="." index="3"]
+surface_material_override/0 = ExtResource("2_7akmm")
+
+[node name="lepestok_005" parent="." index="4"]
+surface_material_override/0 = ExtResource("3_fbaxx")
+
+[node name="Torus" parent="." index="5"]
+surface_material_override/0 = ExtResource("4_km48t")
+
+[node name="core" parent="." index="6"]
+surface_material_override/0 = ExtResource("4_km48t")

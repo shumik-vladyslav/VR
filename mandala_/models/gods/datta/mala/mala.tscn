@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3 uid="uid://yymb1qytfsrn"]
+
+[ext_resource type="PackedScene" uid="uid://b7ccymcqenbfj" path="res://models/gods/datta/mala/mala.glb" id="1_v71w6"]
+
+[node name="mala" instance=ExtResource("1_v71w6")]

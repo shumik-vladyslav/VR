@@ -1,0 +1,8 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Material.094"
+transparency = 4
+cull_mode = 2
+metallic = 0.645455
+roughness = 0.207463

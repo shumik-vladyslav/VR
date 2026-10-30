@@ -1,0 +1,38 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://bcs7ejiuaiqxk"
+path.s3tc="res://.godot/imported/Vamadeva_Ucupaint Metal Metallic-Ucupaint Metal Roughness.png-3ee2524dcb21cc81c426b3c370c13fa8.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "d2ca00f735c0dc418384c8ba0f55f1c7"
+}
+
+[deps]
+
+source_file="res://models/gods/round1/vamadeva/Vamadeva_Ucupaint Metal Metallic-Ucupaint Metal Roughness.png"
+dest_files=["res://.godot/imported/Vamadeva_Ucupaint Metal Metallic-Ucupaint Metal Roughness.png-3ee2524dcb21cc81c426b3c370c13fa8.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

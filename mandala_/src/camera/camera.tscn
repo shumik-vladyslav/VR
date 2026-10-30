@@ -1,0 +1,69 @@
+[gd_scene load_steps=3 format=3 uid="uid://dhjwi5p3e2rjn"]
+
+[ext_resource type="Script" path="res://src/camera/Camera.cs" id="1_jdxld"]
+[ext_resource type="Script" path="res://src/camera/FreeCamera.cs" id="2_0c3jl"]
+
+[node name="CameraOrigin" type="Node3D"]
+script = ExtResource("1_jdxld")
+
+[node name="MainCamera" type="Camera3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.143)
+current = true
+
+[node name="MLightContainer" type="Node3D" parent="MainCamera"]
+unique_name_in_owner = true
+
+[node name="LightM1" type="SpotLight3D" parent="MainCamera/MLightContainer"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.218994)
+light_color = Color(0.836883, 0.624446, 0.271493, 1)
+light_energy = 2.881
+light_size = 0.375
+light_specular = 0.0
+spot_range = 10.0
+spot_angle = 36.87
+
+[node name="LightM2" type="SpotLight3D" parent="MainCamera/MLightContainer"]
+transform = Transform3D(0.588858, 0.181814, -0.787522, -0.181814, 0.979195, 0.0901167, 0.787522, 0.0901164, 0.609663, -4.79524, 0.267998, -1.16083)
+light_color = Color(0.835294, 0.623529, 0.270588, 1)
+light_energy = 3.0
+light_specular = 0.0
+spot_range = 10.039
+
+[node name="LightM3" type="SpotLight3D" parent="MainCamera/MLightContainer"]
+transform = Transform3D(0.644978, -0.171908, 0.744615, 0.171908, 0.982035, 0.0778159, -0.744615, 0.0778157, 0.662943, 3.45496, 0.361798, -1.56712)
+light_color = Color(0.835294, 0.623529, 0.270588, 1)
+light_energy = 2.881
+light_specular = 0.0
+spot_range = 10.0
+
+[node name="FreeCamera" type="Camera3D" parent="."]
+unique_name_in_owner = true
+visible = false
+script = ExtResource("2_0c3jl")
+
+[node name="FLightContainer" type="Node3D" parent="FreeCamera"]
+unique_name_in_owner = true
+
+[node name="LightF1" type="SpotLight3D" parent="FreeCamera/FLightContainer"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.405932)
+light_color = Color(0.836883, 0.624446, 0.271493, 1)
+light_energy = 2.881
+light_size = 0.375
+light_specular = 0.0
+spot_range = 10.0
+spot_angle = 36.87
+
+[node name="LightF2" type="SpotLight3D" parent="FreeCamera/FLightContainer"]
+transform = Transform3D(0.588858, 0.181814, -0.787522, -0.181814, 0.979195, 0.0901167, 0.787522, 0.0901164, 0.609663, -4.79524, 0.267998, -1.16083)
+light_color = Color(0.835294, 0.623529, 0.270588, 1)
+light_energy = 3.0
+light_specular = 0.0
+spot_range = 10.039
+
+[node name="LightF3" type="SpotLight3D" parent="FreeCamera/FLightContainer"]
+transform = Transform3D(0.644978, -0.171908, 0.744615, 0.171908, 0.982035, 0.0778159, -0.744615, 0.0778157, 0.662943, 3.45496, 0.361798, -1.56712)
+light_color = Color(0.835294, 0.623529, 0.270588, 1)
+light_energy = 2.881
+light_specular = 0.0
+spot_range = 10.0

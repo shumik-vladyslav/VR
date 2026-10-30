@@ -1,0 +1,29 @@
+[gd_resource type="ShaderMaterial" load_steps=6 format=3 uid="uid://pemgiyku3tns"]
+
+[ext_resource type="Shader" path="res://models/gods/teurgia1/others/lotos_materials/core.gdshader" id="1_cnnei"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_ammi3"]
+noise_type = 3
+frequency = 0.5999
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_ma78o"]
+noise = SubResource("FastNoiseLite_ammi3")
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_u6tq8"]
+noise_type = 3
+frequency = 0.6
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_xjp8w"]
+as_normal_map = true
+bump_strength = 0.3
+noise = SubResource("FastNoiseLite_u6tq8")
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_cnnei")
+shader_parameter/color1 = Color(0.803922, 0.615686, 0.321569, 1)
+shader_parameter/color2 = Color(0.564706, 0.345098, 0.172549, 1)
+shader_parameter/metalic = 0.641
+shader_parameter/roughness = 0.207
+shader_parameter/noiseTex = SubResource("NoiseTexture2D_ma78o")
+shader_parameter/normalTex = SubResource("NoiseTexture2D_xjp8w")

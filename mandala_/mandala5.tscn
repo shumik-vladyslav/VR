@@ -1,0 +1,200 @@
+[gd_scene load_steps=26 format=3 uid="uid://dp6eov3k5fnqk"]
+
+[ext_resource type="Script" path="res://src/Mandala5.cs" id="1_k2elg"]
+[ext_resource type="PackedScene" uid="uid://bt3p356gifewf" path="res://models/gods/datta/rose/rose.tscn" id="2_8ndvx"]
+[ext_resource type="Script" path="res://src/SelectableObject.cs" id="2_nqwvf"]
+[ext_resource type="PackedScene" uid="uid://o24e8qsl2miv" path="res://models/gods/round1/aghora/aghora.tscn" id="2_xd5fl"]
+[ext_resource type="PackedScene" uid="uid://yymb1qytfsrn" path="res://models/gods/datta/mala/mala.tscn" id="3_pp82v"]
+[ext_resource type="PackedScene" uid="uid://bx4tvsu2kcee2" path="res://models/gods/datta/main/datta.tscn" id="4_a7hb7"]
+[ext_resource type="PackedScene" uid="uid://dstwmgjj2wrax" path="res://models/gods/datta/others/chetki.tscn" id="5_utnoq"]
+[ext_resource type="PackedScene" uid="uid://cl0x21ynhbyfq" path="res://models/gods/datta/others/lotos.tscn" id="6_u1wtk"]
+[ext_resource type="PackedScene" uid="uid://dbasempda12l7" path="res://models/gods/datta/Shkura.glb" id="6_ytav2"]
+[ext_resource type="PackedScene" uid="uid://6rflgefco8bd" path="res://models/gods/datta/others/tilaki.tscn" id="7_f61b2"]
+[ext_resource type="PackedScene" uid="uid://bpniq2cl4sq8n" path="res://src/menu/menu_layer.tscn" id="9_ohjt6"]
+[ext_resource type="PackedScene" uid="uid://b0ufbyu8r246r" path="res://src/selectable_menu/selectable_menu.tscn" id="10_ny4vv"]
+[ext_resource type="PackedScene" uid="uid://b6y5v2o0cxco5" path="res://models/gods/round1/ishana/Ishana.tscn" id="10_ybqdx"]
+[ext_resource type="PackedScene" uid="uid://ducp7gqlxhpl6" path="res://models/gods/round1/sadjodjata/sadjodzata.tscn" id="11_5c3es"]
+[ext_resource type="PackedScene" uid="uid://dhjwi5p3e2rjn" path="res://src/camera/camera.tscn" id="11_p445t"]
+[ext_resource type="Texture2D" uid="uid://bj081rwwmt6do" path="res://textures/NewTextureRenderTargetCube_Tex1.HDR" id="15_5au34"]
+[ext_resource type="PackedScene" uid="uid://bj8e3l0a7ywyy" path="res://models/gods/round1/tatpurusha/tatpurusha.tscn" id="16_yk2gc"]
+[ext_resource type="PackedScene" uid="uid://b0h12f3thtss2" path="res://models/gods/round1/vamadeva/vamadeva.tscn" id="17_wilij"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_01fyx"]
+height = 1.00977
+radius = 2.43128
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_7n4iq"]
+radius = 2.14318
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_8xas5"]
+height = 2.86763
+radius = 3.0
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_akgn4"]
+panorama = ExtResource("15_5au34")
+energy_multiplier = 0.96
+
+[sub_resource type="Sky" id="Sky_eh136"]
+sky_material = SubResource("PanoramaSkyMaterial_akgn4")
+process_mode = 1
+
+[sub_resource type="Environment" id="Environment_4as72"]
+background_mode = 2
+background_color = Color(1, 1, 1, 1)
+background_energy_multiplier = 1.7
+sky = SubResource("Sky_eh136")
+sky_custom_fov = 89.3
+ambient_light_source = 2
+ambient_light_color = Color(0.76565, 0.754838, 0.714615, 1)
+ambient_light_sky_contribution = 0.03
+ambient_light_energy = 2.72
+reflected_light_source = 1
+tonemap_exposure = 0.79
+tonemap_white = 4.52
+ssr_enabled = true
+ssr_fade_in = 0.559819
+ssao_enabled = true
+ssil_enabled = true
+ssil_intensity = 3.21
+ssil_sharpness = 0.25
+ssil_normal_rejection = 0.76
+sdfgi_read_sky_light = false
+sdfgi_energy = 0.125
+glow_enabled = true
+glow_normalized = true
+glow_intensity = 4.1
+glow_strength = 0.79
+glow_bloom = 0.03
+fog_light_energy = 0.92
+volumetric_fog_density = 0.0569
+volumetric_fog_albedo = Color(0.223529, 0.619608, 0.796078, 1)
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_wfb0c"]
+
+[node name="Mandala5" type="Node3D" node_paths=PackedStringArray("_selectable", "Vectors")]
+script = ExtResource("1_k2elg")
+_selectable = NodePath("Selectable")
+Vectors = []
+
+[node name="Selectable" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="MandalaObsesve" type="Node3D" parent="Selectable" node_paths=PackedStringArray("TargetObject")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.40727, 20.8928)
+script = ExtResource("2_nqwvf")
+Name = "Обзор"
+TargetObject = NodePath(".")
+
+[node name="Datta" type="Node3D" parent="Selectable" node_paths=PackedStringArray("TargetObject")]
+unique_name_in_owner = true
+script = ExtResource("2_nqwvf")
+Name = "Даттатрейя"
+TargetObject = NodePath("Target")
+
+[node name="Shkura" parent="Selectable/Datta" instance=ExtResource("6_ytav2")]
+transform = Transform3D(1, 0, 0, 0, 0.998834, -0.0482745, 0, 0.0482745, 0.998834, -0.0334772, -0.0192245, 0.0559548)
+
+[node name="rose" parent="Selectable/Datta" instance=ExtResource("2_8ndvx")]
+
+[node name="mala" parent="Selectable/Datta" instance=ExtResource("3_pp82v")]
+
+[node name="datta" parent="Selectable/Datta" instance=ExtResource("4_a7hb7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.01, 0)
+
+[node name="chetki" parent="Selectable/Datta" instance=ExtResource("5_utnoq")]
+
+[node name="lotos" parent="Selectable/Datta" instance=ExtResource("6_u1wtk")]
+
+[node name="Area3D" type="Area3D" parent="Selectable/Datta/lotos"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Selectable/Datta/lotos/Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46102, -0.319215)
+shape = SubResource("CylinderShape3D_01fyx")
+
+[node name="tilaki" parent="Selectable/Datta" instance=ExtResource("7_f61b2")]
+
+[node name="Target" type="Node3D" parent="Selectable/Datta"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15384, 0)
+
+[node name="Area3D" type="Area3D" parent="Selectable/Datta"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.19765, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Selectable/Datta/Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.161783, 0)
+shape = SubResource("SphereShape3D_7n4iq")
+
+[node name="Vamadeva" parent="Selectable" node_paths=PackedStringArray("TargetObject") instance=ExtResource("17_wilij")]
+transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, -0.104642, 0.857844, -11.838)
+TargetObject = NodePath("Target")
+
+[node name="Target" type="Node3D" parent="Selectable/Vamadeva"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.26002, 0)
+
+[node name="Tatpurusha" parent="Selectable" node_paths=PackedStringArray("TargetObject") instance=ExtResource("16_yk2gc")]
+transform = Transform3D(0.42, 0, 0, 0, 0.42, 0, 0, 0, 0.42, 12.2568, -1.22471, -0.0378909)
+TargetObject = NodePath("Target")
+
+[node name="Target" type="Node3D" parent="Selectable/Tatpurusha"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.69591, 0)
+
+[node name="Aghora" parent="Selectable" node_paths=PackedStringArray("TargetObject") instance=ExtResource("2_xd5fl")]
+transform = Transform3D(0.392, 0, 0, 0, 0.392, 0, 0, 0, 0.392, 0.0440474, -0.943833, 11.4151)
+TargetObject = NodePath("Target")
+
+[node name="Target" type="Node3D" parent="Selectable/Aghora"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.58461, 0)
+
+[node name="Ishana" parent="Selectable" node_paths=PackedStringArray("TargetObject") instance=ExtResource("10_ybqdx")]
+transform = Transform3D(0.42, 0, 0, 0, 0.42, 0, 0, 0, 0.42, 0.0468373, 8.21964, 0.0302687)
+TargetObject = NodePath("Target")
+
+[node name="Target" type="Node3D" parent="Selectable/Ishana"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.24798, 0)
+
+[node name="Sadjodzata" parent="Selectable" node_paths=PackedStringArray("TargetObject") instance=ExtResource("11_5c3es")]
+transform = Transform3D(0.42, 0, 0, 0, 0.42, 0, 0, 0, 0.42, -12.283, 2.0615, 0.0315055)
+TargetObject = NodePath("Target")
+
+[node name="Target" type="Node3D" parent="Selectable/Sadjodzata"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.602751, 0)
+
+[node name="Area3D2" type="Area3D" parent="Selectable/Sadjodzata"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.4081, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Selectable/Sadjodzata/Area3D2"]
+shape = SubResource("CylinderShape3D_8xas5")
+
+[node name="Environment" type="Node3D" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Environment"]
+transform = Transform3D(1, 0, 0, 0, 0.639332, 0.768931, 0, -0.768931, 0.639332, 0.0037359, 1.65906, 5.36709)
+light_energy = 0.516
+light_angular_distance = 0.83
+shadow_enabled = true
+shadow_opacity = 0.35
+shadow_blur = 0.594
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Environment"]
+environment = SubResource("Environment_4as72")
+camera_attributes = SubResource("CameraAttributesPractical_wfb0c")
+
+[node name="Menu" parent="." instance=ExtResource("9_ohjt6")]
+unique_name_in_owner = true
+IsStartDattaShown = true
+IsStartTeurgia1Shown = true
+
+[node name="SelectableMenu" parent="." instance=ExtResource("10_ny4vv")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Camera" parent="." node_paths=PackedStringArray("CameraTarget") instance=ExtResource("11_p445t")]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.7599, 2.25048, -1.07424)
+CameraTarget = NodePath("../Selectable/MandalaObsesve")
+
+[node name="ReflectionProbe" type="ReflectionProbe" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6875, 0, -0.939087)
+update_mode = 1
+size = Vector3(34.582, 20, 35.26)
+ambient_mode = 2
+ambient_color = Color(0.838547, 0.834603, 0.823864, 1)

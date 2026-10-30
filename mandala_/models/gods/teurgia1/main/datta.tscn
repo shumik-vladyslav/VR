@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/gods/teurgia1/main/datta.glb" id="1_2kihs"]
+
+[node name="datta" instance=ExtResource("1_2kihs")]

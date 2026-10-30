@@ -1,0 +1,8 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Procedural Gold Material"
+cull_mode = 2
+albedo_color = Color(1, 0.886275, 0.607843, 1)
+metallic = 0.93
+roughness = 0.25

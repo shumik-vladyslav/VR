@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3 uid="uid://mp78edh1wimh"]
+
+[ext_resource type="PackedScene" uid="uid://dfq2hjm4jxgmn" path="res://models/gods/round1/vamadeva/Lotos.glb" id="1_q8m6u"]
+
+[node name="Lotos" instance=ExtResource("1_q8m6u")]

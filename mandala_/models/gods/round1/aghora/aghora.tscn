@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3 uid="uid://o24e8qsl2miv"]
+
+[ext_resource type="PackedScene" uid="uid://rbce6o21lhwc" path="res://models/gods/round1/aghora/Aghora.glb" id="1_d2xd1"]
+[ext_resource type="Script" path="res://src/SelectableObject.cs" id="2_aofon"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_vse5n"]
+radius = 4.42868
+height = 8.85737
+
+[node name="Aghora" instance=ExtResource("1_d2xd1")]
+script = ExtResource("2_aofon")
+Name = "Агхора"
+
+[node name="Area3D" type="Area3D" parent="." index="34"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.80232, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.283216, 0)
+shape = SubResource("CapsuleShape3D_vse5n")
