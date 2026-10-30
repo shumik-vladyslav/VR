@@ -1,6 +1,7 @@
 extends Node3D
 ## Практика «Тантрическая теургия 1»: ведёт этапы по записи, управляет камерой, звуком и эффектами.
-## Управление: → / ← — к следующему / предыдущему шагу, Пробел — пауза, Esc — меню.
+## Управление: WASD — ходить, мышь — смотреть, Q / E — ниже / выше, Shift — быстрее,
+## → / ← — к следующему / предыдущему шагу, Пробел — пауза, Esc — меню.
 
 const STAGES := [preload("res://src/practice/stage1_guru_yoga.gd")]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
@@ -17,6 +18,15 @@ const RefugeTree := preload("res://src/practice/refuge_tree.gd")
 ## Низ древа (подставка коренного Гуру), по центру лотоса
 @export var tree_position := Vector3(0.0, 0.35, -0.36)
 
+@export_group("Перемещение")
+@export var move_speed := 1.5
+@export var mouse_sensitivity := 0.15
+## Ходить можно в круге этого радиуса вокруг центра мандалы
+@export var walk_radius := 9.0
+@export var mandala_center := Vector2(0.05, -0.36)
+@export var min_height := 0.6
+@export var max_height := 6.0
+
 var _fx
 var _player: AudioStreamPlayer
 var _stage
@@ -27,9 +37,13 @@ var _paused := false
 var _finished := false
 var _frames := 0
 var _menu: Node
+var _cam: Camera3D
+var _pos := Vector3.ZERO
+var _yaw := 0.0
+var _pitch := 0.0
 
 func _ready() -> void:
-	# Скрипт сцены крутит камеру мышью — во время практики камера неподвижна
+	# Скрипт сцены крутит камеру вокруг Датты — во время практики камерой управляет практика
 	var scene := get_parent()
 	scene.set_process_input(false)
 	scene.set_physics_process(false)
@@ -43,8 +57,19 @@ func _ready() -> void:
 				child.visible = false
 	origin.transform = Transform3D.IDENTITY
 	var cam: Camera3D = origin.get_node("MainCamera")
+	_cam = cam
 	cam.global_position = camera_position
 	cam.look_at(camera_target, Vector3.UP)
+	_pos = camera_position
+	_yaw = cam.global_rotation.y
+	_pitch = cam.global_rotation.x
+	# Для проверки: PRACTICE_POSE="x,y,z,yaw°,pitch°" — начать с этой точки
+	var pose := OS.get_environment("PRACTICE_POSE").split_floats(",")
+	if pose.size() == 5:
+		_pos = Vector3(pose[0], pose[1], pose[2])
+		_yaw = deg_to_rad(pose[3])
+		_pitch = deg_to_rad(pose[4])
+	_apply_camera()
 
 	var tree := RefugeTree.new()
 	add_child(tree)
@@ -56,6 +81,7 @@ func _ready() -> void:
 	_fx.tree = tree
 	# сияние святых — за Даттой в центре древа
 	_fx.setup(cam, tree.figure_position("datta") + Vector3(0, 0.25, -0.5))
+	_apply_camera()
 
 	_player = AudioStreamPlayer.new()
 	add_child(_player)
@@ -71,6 +97,7 @@ func _process(delta: float) -> void:
 	_frames += 1
 	if _frames < 10:
 		_stop_background_music()   # сцена включает плейлист отложенно — гасим его
+	_move(delta)
 	if _stage == null:
 		if autostart and not _finished:
 			_delay -= delta
@@ -100,6 +127,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			_set_paused(_menu.get("IsOpened"))
 		get_viewport().set_input_as_handled()
 		return
+	if event is InputEventMouseMotion and _looking():
+		# при захвате мыши окно присылает рывок курсора — первые кадры и резкие скачки пропускаем
+		if _frames < 15 or event.relative.length() > 300.0:
+			return
+		_yaw -= deg_to_rad(event.relative.x * mouse_sensitivity)
+		_pitch = clampf(_pitch - deg_to_rad(event.relative.y * mouse_sensitivity), deg_to_rad(-80), deg_to_rad(80))
+		_apply_camera()
+		return
 	if _stage == null or not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 	match event.physical_keycode:
@@ -109,6 +144,39 @@ func _unhandled_input(event: InputEvent) -> void:
 			_seek_cue(-1)
 		KEY_SPACE:
 			_set_paused(not _paused)
+
+## Мышь захвачена и меню закрыто — можно ходить и смотреть
+func _looking() -> bool:
+	return Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not (_menu and _menu.get("IsOpened"))
+
+func _move(delta: float) -> void:
+	if _looking():
+		var dir := Vector3.ZERO
+		if Input.is_physical_key_pressed(KEY_W): dir.z -= 1.0
+		if Input.is_physical_key_pressed(KEY_S): dir.z += 1.0
+		if Input.is_physical_key_pressed(KEY_A): dir.x -= 1.0
+		if Input.is_physical_key_pressed(KEY_D): dir.x += 1.0
+		var up := 0.0
+		if Input.is_physical_key_pressed(KEY_E): up += 1.0
+		if Input.is_physical_key_pressed(KEY_Q): up -= 1.0
+		var speed := move_speed * (2.5 if Input.is_physical_key_pressed(KEY_SHIFT) else 1.0)
+		if dir != Vector3.ZERO:
+			_pos += Basis(Vector3.UP, _yaw) * dir.normalized() * speed * delta
+		_pos.y = clampf(_pos.y + up * speed * delta, min_height, max_height)
+		# не выходить за край мандалы
+		var flat := Vector2(_pos.x, _pos.z) - mandala_center
+		if flat.length() > walk_radius:
+			flat = flat.normalized() * walk_radius
+			_pos.x = mandala_center.x + flat.x
+			_pos.z = mandala_center.y + flat.y
+	_apply_camera()
+
+func _apply_camera() -> void:
+	if _cam == null:
+		return
+	_cam.global_transform = Transform3D(Basis.from_euler(Vector3(_pitch, _yaw, 0.0)), _pos)
+	if _fx:
+		_fx.follow(_pos, _yaw)
 
 func _start_stage(index: int, at: float) -> void:
 	_stop_background_music()

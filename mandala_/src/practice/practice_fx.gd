@@ -1,7 +1,7 @@
 extends Node3D
 ## Визуальные эффекты практики. Этап выставляет значения полей каждый кадр, затем вызывается commit().
-## Всё, что «в теле» практикующего (знак Ом, свет в глазах, текст), висит на камере —
-## при переходе на VR это будет XR-камера.
+## Свет в глазах и текст висят на камере (в VR — XR-камера). Знак Ом стоит перед практикующим
+## на уровне груди и следует за ним (follow): поворачивается вместе с ним, но не наклоняется со взглядом.
 
 const OM_EMBLEM_SHADER := preload("res://src/practice/om_emblem.gdshader")
 const AURA_SHADER := preload("res://src/practice/aura.gdshader")
@@ -26,6 +26,10 @@ var tree_shine := 0.0
 ## Древо Прибежища (refuge_tree.gd), если есть
 var tree: Node3D
 
+## Где знак Ом относительно практикующего: у груди, чуть впереди и ниже глаз (м) — лучи идут как из тела
+var om_offset := Vector3(0.0, -0.3, -0.6)
+
+var _om_pivot: Node3D
 var _om: MeshInstance3D
 var _aura: MeshInstance3D
 var _aura_light: OmniLight3D
@@ -34,12 +38,15 @@ var _title: Label3D
 var _text: Label3D
 
 func setup(camera: Camera3D, aura_position: Vector3) -> void:
-	# Знак Ом — в нижней части поля зрения, «в груди»
+	# Знак Ом — перед практикующим на уровне груди, следует за ним
+	_om_pivot = Node3D.new()
+	add_child(_om_pivot)
 	_om = _quad(OM_EMBLEM_SHADER, Vector2(2.4, 2.4))
 	_om.material_override.set_shader_parameter("glyph", OM_GLYPH)
-	_om.material_override.set_shader_parameter("glyph_size", 0.13)
-	_om.position = Vector3(0, -0.95, -1.5)
-	camera.add_child(_om)
+	_om.material_override.set_shader_parameter("glyph_size", 0.07)
+	_om.position = om_offset
+	_om_pivot.add_child(_om)
+	follow(camera.global_position, camera.global_rotation.y)
 
 	# Сияние за Даттой
 	_aura = _quad(AURA_SHADER, Vector2(6, 6))
@@ -65,6 +72,11 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_text.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	camera.add_child(_text)
 	commit()
+
+## Перенести знак Ом к практикующему: позиция глаз и поворот головы по горизонтали
+func follow(eye_position: Vector3, yaw: float) -> void:
+	if _om_pivot:
+		_om_pivot.global_transform = Transform3D(Basis(Vector3.UP, yaw), eye_position)
 
 func commit() -> void:
 	var om := _om.material_override as ShaderMaterial
