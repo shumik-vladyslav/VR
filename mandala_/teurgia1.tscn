@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://bsldhdm5s1ybm"]
+[gd_scene load_steps=18 format=3 uid="uid://bsldhdm5s1ybm"]
 
 [ext_resource type="Script" path="res://src/Scene.cs" id="1_t46rm"]
 [ext_resource type="PackedScene" uid="uid://gomrrhd21bf" path="res://models/gods/teurgia1/Shkura.glb" id="2_5dsuy"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://models/gods/teurgia1/floor/mandala_floor.tscn" id="11_tpb5d"]
 [ext_resource type="Texture2D" uid="uid://dbtwtehb8d542" path="res://textures/Nebula 4 4k.hdr" id="12_fuw5e"]
 [ext_resource type="PackedScene" uid="uid://bpniq2cl4sq8n" path="res://src/menu/menu_layer.tscn" id="14_qfjil"]
+[ext_resource type="Script" path="res://src/practice/practice.gd" id="16_practice"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_q240f"]
 height = 0.891521
@@ -119,7 +120,6 @@ shadow_blur = 0.594
 transform = Transform3D(0.737154, 0.326945, -0.591364, 0, 0.875155, 0.483843, 0.675725, -0.356667, 0.645124, -2.2, 4.8, 2.4)
 light_color = Color(1, 0.88, 0.75, 1)
 light_energy = 6.0
-light_specular = 0.5
 shadow_enabled = true
 spot_range = 10.0
 spot_angle = 25.0
@@ -143,3 +143,6 @@ IsStartMandalaShown = true
 
 [node name="MandalaFloor" parent="." instance=ExtResource("11_tpb5d")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, -0.18, -0.36)
+
+[node name="Practice" type="Node3D" parent="."]
+script = ExtResource("16_practice")
