@@ -77,6 +77,7 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_aura_light = OmniLight3D.new()
 	_aura_light.light_color = Color(1.0, 0.88, 0.7)
 	_aura_light.omni_range = 7.0
+	_aura_light.light_specular = 0.0   # иначе в зеркальном полу виден мигающий блик-точка
 	_aura_light.position = aura_position + Vector3(0, 0.8, 3.2)
 	add_child(_aura_light)
 
@@ -105,6 +106,7 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_center_light.light_color = Color(1.0, 0.86, 0.6)
 	_center_light.omni_range = 14.0
 	_center_light.omni_attenuation = 1.2
+	_center_light.light_specular = 0.0
 	_beams.add_child(_center_light)
 
 	# Свет, заполняющий взгляд, — прямо перед камерой, поверх всего

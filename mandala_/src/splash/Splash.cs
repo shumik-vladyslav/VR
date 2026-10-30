@@ -21,10 +21,25 @@ public partial class Splash : Control
 	private void OnAnimationFinished(StringName animationName)
 	{
 		if (animationName == "intro")
+			Finish();
+	}
+
+	// Клик мышью или любая клавиша — пропустить заставку
+	public override void _Input(InputEvent @event)
+	{
+		if (!Visible || AnimationPlayer.CurrentAnimation != "intro")
+			return;
+		if ((@event is InputEventMouseButton mouse && mouse.Pressed) || (@event is InputEventKey key && key.Pressed && !key.Echo))
 		{
-			AnimationPlayer.Play("RESET");
-			EmitSignal(SignalName.End);
+			GetViewport().SetInputAsHandled();
+			Finish();
 		}
+	}
+
+	private void Finish()
+	{
+		AnimationPlayer.Play("RESET");
+		EmitSignal(SignalName.End);
 	}
 
 	public void StartSplashScreen()

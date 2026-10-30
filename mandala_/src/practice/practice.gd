@@ -1,6 +1,6 @@
 extends Node3D
 ## Практика «Тантрическая теургия 1»: ведёт этапы по записи, управляет камерой, звуком и эффектами.
-## Управление: WASD — ходить, мышь — смотреть, Q / E — ниже / выше, Shift — быстрее,
+## Управление: WASD — ходить, мышь — смотреть, Q / E — ниже / выше, Shift — быстрее, ЛКМ — взять / поднести лепестки,
 ## → / ← — к следующему / предыдущему шагу, 1…9 — перейти к этапу, Пробел — пауза, Esc — меню.
 
 const STAGES := [
@@ -11,6 +11,7 @@ const STAGES := [
 ]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
 const RefugeTree := preload("res://src/practice/refuge_tree.gd")
+const Offering := preload("res://src/practice/offering.gd")
 
 @export var autostart := true
 @export var start_delay := 2.0
@@ -22,6 +23,10 @@ const RefugeTree := preload("res://src/practice/refuge_tree.gd")
 @export var camera_target := Vector3(0.0, 2.77, -0.36)
 ## Низ древа (подставка коренного Гуру), по центру лотоса
 @export var tree_position := Vector3(0.0, 0.35, -0.36)
+## Золотой стол с лепестками для подношения — справа впереди от практикующего, на полу мандалы
+@export var offering_table_position := Vector3(2.8, -0.165, 1.4)
+## Стойка с цветочными головками — слева, симметрично столу с лепестками
+@export var flower_stand_position := Vector3(-2.8, -0.165, 1.4)
 
 @export_group("Перемещение")
 @export var move_speed := 1.5
@@ -42,6 +47,7 @@ var _paused := false
 var _finished := false
 var _frames := 0
 var _menu: Node
+var _offering
 var _cam: Camera3D
 var _pos := Vector3.ZERO
 var _yaw := 0.0
@@ -62,6 +68,10 @@ func _ready() -> void:
 				child.visible = false
 	origin.transform = Transform3D.IDENTITY
 	var cam: Camera3D = origin.get_node("MainCamera")
+	# Блики прожекторов в зеркальном полу мигают как битый пиксель; 3D-Датты во время практики нет — блики не нужны
+	for light in scene.find_children("*", "Light3D", true, false):
+		if not (light is DirectionalLight3D):
+			(light as Light3D).light_specular = 0.0
 	_cam = cam
 	cam.global_position = camera_position
 	cam.look_at(camera_target, Vector3.UP)
@@ -88,6 +98,10 @@ func _ready() -> void:
 	_fx.setup(cam, tree.figure_position("datta") + Vector3(0, 0.25, -0.5))
 	_apply_camera()
 
+	_offering = Offering.new()
+	add_child(_offering)
+	_offering.setup(cam, offering_table_position, flower_stand_position, tree.figure_position("datta"))
+
 	_player = AudioStreamPlayer.new()
 	add_child(_player)
 
@@ -103,6 +117,10 @@ func _process(delta: float) -> void:
 	_frames += 1
 	if _frames < 10:
 		_stop_background_music()   # сцена включает плейлист отложенно — гасим его
+	# Для проверки: PRACTICE_OFFER="кадр взять,кадр поднести" — нажать «действие» на этих кадрах
+	var offer_frames := OS.get_environment("PRACTICE_OFFER").split_floats(",")
+	if offer_frames.has(float(_frames)):
+		_offering.interact()
 	_move(delta)
 	if _stage == null:
 		if autostart and not _finished:
@@ -122,6 +140,8 @@ func _process(delta: float) -> void:
 		_next_stage()
 		return
 	_stage.apply(_t, _fx)
+	# после подношения лепестков святые на время разгораются
+	_fx.tree_shine = maxf(_fx.tree_shine, 0.8 * _offering.glow)
 	if OS.has_environment("PRACTICE_DEBUG"):
 		print("PRACTICE frame=%d t=%.2f beams=%.2f white=%.2f" % [_frames, _t, _fx.center_beams, _fx.whiteout])
 	if not show_text:
@@ -142,6 +162,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_yaw -= deg_to_rad(event.relative.x * mouse_sensitivity)
 		_pitch = clampf(_pitch - deg_to_rad(event.relative.y * mouse_sensitivity), deg_to_rad(-80), deg_to_rad(80))
 		_apply_camera()
+		return
+	# ЛКМ — взять лепестки со стола / поднести их
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed and _looking():
+		_offering.interact()
 		return
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
