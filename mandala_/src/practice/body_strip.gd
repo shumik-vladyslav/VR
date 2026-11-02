@@ -144,3 +144,76 @@ static func _union(parent: PackedInt32Array, a: int, b: int) -> void:
 	var rb := _find(parent, b)
 	if ra != rb:
 		parent[ra] = rb
+
+## Сделать меш симметричным: половину модели со стороны side (+1 — x > 0, −1 — x < 0) оставить
+## и отразить на другую сторону (x → −x в координатах модели), а другую половину убрать. Так одна аккуратная
+## рука и плечо становятся двумя одинаковыми. Только треугольники выше y_min (ниже — без изменений).
+static func mirror_half(mi: MeshInstance3D, to_model: Transform3D, side: float, y_min := -INF) -> void:
+	var src := mi.mesh
+	if src == null:
+		return
+	var from_model := to_model.affine_inverse()
+	var flip := Basis(Vector3(-1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1))
+	var out := ArrayMesh.new()
+	for s in src.get_surface_count():
+		var arrays := src.surface_get_arrays(s)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var norms: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT] if arrays[Mesh.ARRAY_TANGENT] != null else PackedFloat32Array()
+		var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		if idx.is_empty():
+			idx = PackedInt32Array(range(verts.size()))
+		var n := verts.size()
+		var model := PackedVector3Array()
+		model.resize(n)
+		for i in n:
+			model[i] = to_model * verts[i]
+		# новые вершины: исходные + отражённые копии (индекс + n)
+		var v2 := verts.duplicate()
+		var n2 := norms.duplicate()
+		var t2 := tangents.duplicate()
+		v2.resize(n * 2)
+		if norms.size() == n:
+			n2.resize(n * 2)
+		if tangents.size() == n * 4:
+			t2.resize(n * 8)
+		for i in n:
+			var p := model[i]
+			v2[n + i] = from_model * Vector3(-p.x, p.y, p.z)
+			if norms.size() == n:
+				var mn := to_model.basis * norms[i]
+				n2[n + i] = (from_model.basis * (flip * mn)).normalized()
+			if tangents.size() == n * 4:
+				var tv := to_model.basis * Vector3(tangents[i * 4], tangents[i * 4 + 1], tangents[i * 4 + 2])
+				var tm := (from_model.basis * (flip * tv)).normalized()
+				t2[(n + i) * 4] = tm.x; t2[(n + i) * 4 + 1] = tm.y; t2[(n + i) * 4 + 2] = tm.z
+				t2[(n + i) * 4 + 3] = -tangents[i * 4 + 3]
+		var new_idx := PackedInt32Array()
+		for t in range(0, idx.size(), 3):
+			var a := idx[t]; var b := idx[t + 1]; var c := idx[t + 2]
+			var cy := (model[a].y + model[b].y + model[c].y) / 3.0
+			var cx := (model[a].x + model[b].x + model[c].x) / 3.0
+			if cy < y_min:
+				new_idx.append(a); new_idx.append(b); new_idx.append(c)
+				continue
+			if cx * side < 0.0:
+				continue    # плохая половина — убрать
+			new_idx.append(a); new_idx.append(b); new_idx.append(c)
+			# отражённая копия, обход в обратную сторону (иначе нормали внутрь)
+			new_idx.append(n + a); new_idx.append(n + c); new_idx.append(n + b)
+		arrays[Mesh.ARRAY_VERTEX] = v2
+		if norms.size() == n:
+			arrays[Mesh.ARRAY_NORMAL] = n2
+		if tangents.size() == n * 4:
+			arrays[Mesh.ARRAY_TANGENT] = t2
+		for k in [Mesh.ARRAY_TEX_UV, Mesh.ARRAY_TEX_UV2, Mesh.ARRAY_COLOR]:
+			if arrays[k] != null and arrays[k].size() == n:
+				var d = arrays[k].duplicate()
+				d.append_array(arrays[k])
+				arrays[k] = d
+		for k in [Mesh.ARRAY_BONES, Mesh.ARRAY_WEIGHTS, Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3]:
+			arrays[k] = null
+		arrays[Mesh.ARRAY_INDEX] = new_idx
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		out.surface_set_material(out.get_surface_count() - 1, src.surface_get_material(s))
+	mi.mesh = out

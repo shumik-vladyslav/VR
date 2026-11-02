@@ -11,7 +11,10 @@ const PANEL_SHADER := preload("res://src/practice/text_panel.gdshader")
 const RAY_SHADER := preload("res://src/practice/ray_beam.gdshader")
 const Transformation := preload("res://src/practice/transformation.gd")
 const SceneExtras := preload("res://src/practice/scene_extras.gd")
-const OM_GLYPH := preload("res://images/om_glyph.png")
+## Ом в лотосе — тот же, что на заставке приложения
+const OM_LOTUS := preload("res://images/om_big.png")
+const OM_CHEST_SIZE := 0.26     # знак у груди практикующего (м)
+const OM_CENTER_SIZE := 3.8     # большой Ом в центре (этап 21 Ом)
 
 const BEAM_COUNT := 44          # лучей во все стороны
 const BEAMS_TO_PLAYER := 5      # лучей к практикующему
@@ -116,17 +119,25 @@ var _ray_hits: Array[MeshInstance3D] = []
 var _datta_light: MeshInstance3D
 var _transformation
 var _extras
+var _om_image: MeshInstance3D
+var _center_om_image: MeshInstance3D
+## Свет, оставшийся от прошлого этапа (переход между этапами идёт через свет, а не обрывается)
+var carry_white := 0.0
 
 func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_camera = camera
 	# Знак Ом — перед практикующим на уровне груди, следует за ним
 	_om_pivot = Node3D.new()
 	add_child(_om_pivot)
+	# сам знак — Ом в лотосе, как на заставке приложения (картинка поверх); шейдер рисует только сияние и лучи вокруг
 	_om = _quad(OM_EMBLEM_SHADER, Vector2(2.4, 2.4))
-	_om.material_override.set_shader_parameter("glyph", OM_GLYPH)
-	_om.material_override.set_shader_parameter("glyph_size", 0.07)
+	_om.material_override.set_shader_parameter("glyph", OM_LOTUS)
+	_om.material_override.set_shader_parameter("glyph_size", OM_CHEST_SIZE / 2.4)
 	_om.position = om_offset
 	_om_pivot.add_child(_om)
+	_om_image = _om_picture(OM_CHEST_SIZE, false)
+	_om_image.position = om_offset + Vector3(0, 0, 0.01)
+	_om_pivot.add_child(_om_image)
 	follow(camera.global_position, camera.global_rotation.y)
 
 	# Сияние за Даттой
@@ -143,11 +154,14 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	# Большой Ом в центре — перед сиянием, на месте Даттатрейи древа
 	_center_om = _quad(OM_EMBLEM_SHADER, Vector2(9, 9))
 	var cm := _center_om.material_override as ShaderMaterial
-	cm.set_shader_parameter("glyph", OM_GLYPH)
-	cm.set_shader_parameter("glyph_size", 0.27)
+	cm.set_shader_parameter("glyph", OM_LOTUS)
+	cm.set_shader_parameter("glyph_size", OM_CENTER_SIZE / 9.0)
 	cm.set_shader_parameter("billboard", true)
 	_center_om.position = aura_position + Vector3(0, 0.75, 0.6)
 	add_child(_center_om)
+	_center_om_image = _om_picture(OM_CENTER_SIZE, true)
+	_center_om_image.position = _center_om.position + Vector3(0, 0, 0.05)
+	add_child(_center_om_image)
 
 	# Объёмные лучи из самого центра большого Ома — во все стороны и к практикующему
 	_beams = Node3D.new()
@@ -274,17 +288,19 @@ func commit() -> void:
 	_commit_datta()
 	_commit_rays()
 	var om := _om.material_override as ShaderMaterial
-	om.set_shader_parameter("intensity", om_intensity)
+	om.set_shader_parameter("intensity", 0.0)
 	om.set_shader_parameter("halo", om_halo)
 	om.set_shader_parameter("rays_out", rays_out)
 	om.set_shader_parameter("rays_in", rays_in)
 	_om.visible = om_intensity + om_halo + rays_out + rays_in > 0.002
+	_set_picture(_om_image, om_intensity * 1.6, 1.0 + 0.5 * om_halo)
 
 	var cm := _center_om.material_override as ShaderMaterial
-	cm.set_shader_parameter("intensity", center_om)
+	cm.set_shader_parameter("intensity", 0.0)
 	cm.set_shader_parameter("halo", center_halo)
 	cm.set_shader_parameter("rays_out", center_rays)
 	_center_om.visible = center_om + center_halo + center_rays > 0.002
+	_set_picture(_center_om_image, center_om * 1.8, 1.0 + 0.6 * center_halo)
 
 	# Лучи к практикующему смотрят на его текущее место (на грудь) и заканчиваются у него
 	var to_player := _camera.global_position + Vector3(0, -0.4, 0) - _beams.global_position
@@ -310,7 +326,7 @@ func commit() -> void:
 	var veil := _veil.material_override as ShaderMaterial
 	veil.set_shader_parameter("fill", veil_fill)
 	veil.set_shader_parameter("fill_alpha", veil_alpha)
-	var white := maxf(whiteout, 0.3 * touch)
+	var white := maxf(maxf(whiteout, carry_white), 0.3 * touch)
 	veil.set_shader_parameter("whiteout", white)
 	_veil.visible = veil_alpha * veil_fill > 0.002 or white > 0.002
 
@@ -437,6 +453,31 @@ func _orient_beam(m: MeshInstance3D, dir: Vector3, length: float) -> void:
 	var x := y.cross(Vector3.UP if absf(y.y) < 0.95 else Vector3.RIGHT).normalized()
 	var z := x.cross(y)
 	m.transform = Transform3D(Basis(x, y * length, z), dir.normalized() * length * 0.5)
+
+## Картинка Ом в лотосе: непрозрачные цвета (как на заставке), а не только светящийся контур
+func _om_picture(size: float, billboard: bool) -> MeshInstance3D:
+	var m := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(size, size)
+	m.mesh = q
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_texture = OM_LOTUS
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.disable_receive_shadows = true
+	if billboard:
+		mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.material_override = mat
+	m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	m.layers = Transformation.OVERLAY_LAYER if not billboard else 1
+	return m
+
+func _set_picture(m: MeshInstance3D, alpha: float, brightness: float) -> void:
+	var a := clampf(alpha, 0.0, 1.0)
+	m.visible = a > 0.002
+	(m.material_override as StandardMaterial3D).albedo_color = Color(brightness, brightness, brightness, a)
 
 func _quad(shader: Shader, size: Vector2) -> MeshInstance3D:
 	var m := MeshInstance3D.new()

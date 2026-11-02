@@ -57,6 +57,10 @@ var _delay := 0.0
 var _paused := false
 var _finished := false
 var _frames := 0
+## Свет, в котором закончился прошлый этап, — плавно гаснет в начале следующего (переход идёт через свет)
+var _carry_white := 0.0
+var _stage_time := 0.0
+const CARRY_FADE := 4.0
 var _menu: Node
 var _offering
 var _cam: Camera3D
@@ -79,6 +83,7 @@ func _ready() -> void:
 			if child != origin and child is Node3D:
 				child.visible = false
 				datta_parts.append(child)
+	_sharpen_chest_dram(datta)
 	origin.transform = Transform3D.IDENTITY
 	var cam: Camera3D = origin.get_node("MainCamera")
 	# Блики прожекторов в зеркальном полу мигают как битый пиксель; 3D-Датты во время практики нет — блики не нужны
@@ -159,6 +164,8 @@ func _process(delta: float) -> void:
 		_next_stage()
 		return
 	_stage.apply(_t, _fx)
+	_stage_time += delta
+	_fx.carry_white = _carry_white * (1.0 - smoothstep(0.0, CARRY_FADE, _stage_time))
 	# подношения, которые идут прямо по записи (цветы на лучах Ом, пригоршня красных цветов)
 	_offering.apply_rituals(_fx)
 	# после подношения лепестков святые на время разгораются
@@ -252,6 +259,9 @@ func _start_stage(index: int, at: float) -> void:
 	_stop_background_music()
 	_stage_index = index
 	_stage = STAGES[index].new()
+	# сколько света было на экране в конце прошлого этапа — он не обрывается, а плавно гаснет
+	_carry_white = maxf(_fx.whiteout, _fx.carry_white)
+	_stage_time = 0.0
 	_fx.reset()
 	# столы манасика-пуджи — только на этапе, где она есть
 	_offering.set_puja_visible(STAGES[index].get_script_constant_map().has("PUJA"))
@@ -301,6 +311,20 @@ func _seek_cue(direction: int) -> void:
 func _set_paused(p: bool) -> void:
 	_paused = p
 	_player.stream_paused = p
+
+## Слог «Драм» на груди Даттатрейи: в модели он светится ровным цветом на весь квадрат (яркость 3.2) —
+## с сиянием практики это размытое пятно. Светится только сам знак и мягче — знак читается
+func _sharpen_chest_dram(datta: Node) -> void:
+	var dram := datta.find_child("Plane_003", true, false) as MeshInstance3D
+	if dram == null:
+		return
+	var mat := dram.get_active_material(0) as StandardMaterial3D
+	if mat == null:
+		return
+	var m := mat.duplicate() as StandardMaterial3D
+	m.emission_texture = m.albedo_texture
+	m.emission_energy_multiplier = 0.9
+	dram.material_override = m
 
 func _stop_background_music() -> void:
 	var am := get_node_or_null("/root/AudioManager")

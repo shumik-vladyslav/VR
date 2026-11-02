@@ -35,6 +35,10 @@ const MIRROR_SIZE := Vector2(1.7, 2.3)
 ## по центру остаётся виден Даттатрейя на лотосе
 const MIRROR_OFFSET := Vector3(-1.5, -0.35, -2.1)
 const MIRROR_TURN_DEG := 35.0
+## Откуда зеркало «видит» тело и куда смотрит — в координатах модели Даттатрейи (она смотрит в +Z)
+const MIRROR_CAM_FROM := Vector3(0.0, 2.6, 4.9)
+const MIRROR_CAM_AT := Vector3(0.0, 2.05, 0.0)
+const MIRROR_FOV := 46.0
 
 ## 0..1 — преображение практикующего; 1 — преобразился, дальше тело от первого лица
 var merge := 0.0
@@ -99,7 +103,9 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 				g.layers = MIRROR_ONLY_LAYER
 			# достроенные затылок, шея и плечи — без светящегося контура (иначе видны как отдельные белёсые формы)
 			if not mesh_name.begins_with(HEAD_BACK) and p.name != "lotos":
-				g.material_overlay = _eyes_mat if mesh_name == "Glasa_low" else _radiance_mat
+				# глаза без наложения — того же цвета, что у основной фигуры (голубой отсвет менял цвет радужки)
+				if mesh_name != "Glasa_low":
+					g.material_overlay = _radiance_mat
 		for a in copy.find_children("*", "Area3D", true, false):
 			a.queue_free()
 	# свет из тела (огонь) — у груди
@@ -130,7 +136,8 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(_viewport)
 	_mirror_cam = Camera3D.new()
-	_mirror_cam.projection = Camera3D.PROJECTION_FRUSTUM
+	_mirror_cam.projection = Camera3D.PROJECTION_PERSPECTIVE
+	_mirror_cam.fov = MIRROR_FOV
 	_mirror_cam.keep_aspect = Camera3D.KEEP_HEIGHT
 	_mirror_cam.cull_mask = 1 | MIRROR_ONLY_LAYER
 	_viewport.add_child(_mirror_cam)
@@ -157,15 +164,26 @@ static func _is_lower_arm_or_torso(center: Vector3, box: AABB) -> bool:
 		return false
 	return not (box.end.z < 0.0 and absf(center.x) > 0.2)
 
+## У убранных средних рук их кусок захватывает бок торса под мышкой — его оставляем, иначе в боку дыра
+static func _is_torso_skin(p: Vector3) -> bool:
+	return absf(p.x) < 0.36 and p.z > -0.3 and p.y < 2.6
+
+## Рудракша-браслеты на плечах оставшихся рук (бусины лежат позади середины плеча и иначе убираются)
+static func _is_armlet(p: Vector3) -> bool:
+	return absf(p.x) > 0.28 and absf(p.x) < 0.55 and p.y > 1.95 and p.y < 2.3 and p.z > -0.55
+
 ## Обрывки спинной панели, к которой крепились верхние руки: торчали крыльями за плечами
 ## (в зеркале торчали лоскутом и линиями над плечом): у спинной панели убираем края за плечами и весь верх —
 ## спину сзади в зеркале не видно
 static func _is_arm_stub(p: Vector3, box: AABB) -> bool:
 	if box.end.z >= -0.25:
 		return false
-	return absf(p.x) > SHOULDER_HALF_WIDTH or p.y > 1.8
+	return absf(p.x) > SHOULDER_HALF_WIDTH
 
 const SHOULDER_HALF_WIDTH := 0.3
+## Какая половина тела (x > 0: +1, x < 0: −1) отражается на другую; ниже MIRROR_Y_MIN (ноги, пояс) — как есть
+const GOOD_SIDE := -1.0
+const MIRROR_Y_MIN := -INF
 ## Имя затылка, который достраивается к центральной голове (у модели затылок общий для трёх голов)
 const HEAD_BACK := "HeadBack"
 
@@ -191,7 +209,11 @@ static func make_meditation_body(part: Node3D) -> void:
 			to_model = (n as Node3D).transform * to_model
 			n = n.get_parent()
 		if ARM_MESHES.has(mesh_name):
-			BodyStrip.strip(mi, to_model, _is_lower_arm_or_torso, Callable(), _is_arm_stub)
+			BodyStrip.strip(mi, to_model, _is_lower_arm_or_torso, _is_armlet if mesh_name == "Sphere" else _is_torso_skin, _is_arm_stub)
+			# одна сторона (рука, плечо) собирается чисто — отражаем её на другую, тело становится симметричным
+			var side := float(OS.get_environment("MIRROR_SIDE")) if OS.has_environment("MIRROR_SIDE") else GOOD_SIDE
+			if side != 0.0:
+				BodyStrip.mirror_half(mi, to_model, side, MIRROR_Y_MIN)
 		elif FACE_MESHES.has(mesh_name):
 			BodyStrip.strip(mi, to_model, _is_central_head)
 	if is_head:
@@ -249,19 +271,10 @@ func _update_mirror() -> void:
 	if not _mirror.visible:
 		return
 	(_mirror.material_override as ShaderMaterial).set_shader_parameter("alpha", m)
-	# камера отражения: глаза практикующего, отражённые в плоскости зеркала; смотрит по нормали зеркала,
-	# пирамида видимости — ровно через овал зеркала (наклонная проекция), ближняя плоскость — на зеркале
-	var xf := _mirror.global_transform
-	var c := xf.origin
-	var r := xf.basis.x.normalized()
-	var u := xf.basis.y.normalized()
-	var n := xf.basis.z.normalized()        # к практикующему
-	var eye := _camera.global_position
-	var d := (eye - c).dot(n)
-	if d <= 0.05:
-		return
-	var reflected := eye - 2.0 * d * n
-	var x := -r
-	_mirror_cam.global_transform = Transform3D(Basis(x, u, -n), reflected)
-	var delta := c - reflected
-	_mirror_cam.set_frustum(MIRROR_SIZE.y, Vector2(delta.dot(x), delta.dot(u)), d * 0.999, 80.0)
+	# «Зеркало света» показывает практикующего всегда спереди, как портрет (картинка отражена, как в зеркале):
+	# настоящее отражение показывало тело сбоку, а сбоку и сзади у двурукой формы пусто — спина модели общая
+	# для шести рук. Камера стоит перед телом в его координатах и смотрит на грудь.
+	var body := body_transform()
+	var eye: Vector3 = body * MIRROR_CAM_FROM
+	var target: Vector3 = body * MIRROR_CAM_AT
+	_mirror_cam.global_transform = Transform3D.IDENTITY.translated(eye).looking_at(target, Vector3.UP)

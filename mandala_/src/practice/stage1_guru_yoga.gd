@@ -56,10 +56,11 @@ func apply(t: float, fx) -> void:
 	fx.aura = 0.6 * tree + boost
 
 	# Третий Ом: белый свет заполняет тело сверху вниз, и нечистое тело растворяется в чистом свете;
-	# после поклона сцена мягко возвращается (на втором Ом лучи мудрости только входят — rays_in)
+	# свет остаётся до конца — следующий этап начинается с выхода из него (на втором Ом лучи мудрости
+	# только входят — rays_in)
 	fx.veil_fill = smoothstep(OM3.x + 0.3, OM3.x + 5.0, t) * 1.2
 	fx.veil_alpha = 0.35 * _win(t, OM3.x, OM3.y, 1.0, 3.0)
-	fx.whiteout = smoothstep(OM3.x + 4.0, OM3.y - 0.5, t) * (1.0 - smoothstep(BOW + 1.0, BOW + 7.0, t))
+	fx.whiteout = smoothstep(OM3.x + 4.0, OM3.y - 0.5, t)
 
 	# Текст
 	fx.title = ""
