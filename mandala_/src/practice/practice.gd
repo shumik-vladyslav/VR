@@ -10,6 +10,7 @@ const STAGES := [
 	preload("res://src/practice/stage4_refuge.gd"),
 	preload("res://src/practice/stage5_three_rays.gd"),
 	preload("res://src/practice/stage6_transformation.gd"),
+	preload("res://src/practice/stage7_datta_stava.gd"),
 ]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
 const RefugeTree := preload("res://src/practice/refuge_tree.gd")
@@ -25,10 +26,18 @@ const Offering := preload("res://src/practice/offering.gd")
 @export var camera_target := Vector3(0.0, 2.77, -0.36)
 ## Низ древа (подставка коренного Гуру), по центру лотоса
 @export var tree_position := Vector3(0.0, 0.35, -0.36)
-## Золотой стол с лепестками для подношения — справа впереди от практикующего, на полу мандалы
-@export var offering_table_position := Vector3(2.8, -0.165, 1.4)
-## Стойка с цветочными головками — слева, симметрично столу с лепестками
-@export var flower_stand_position := Vector3(-2.8, -0.165, 1.4)
+## Все столы подношений стоят дугой справа, у края мандалы (радиус ~5.2 от центра): от ближнего к дальнему —
+## лепестки, цветы, плоды, лампада, благовония, вода
+@export var offering_table_position := Vector3(2.25, -0.165, 4.35)
+@export var flower_stand_position := Vector3(3.53, -0.165, 3.5)
+@export_group("Манасика-пуджа (этап Датта Става)")
+@export var fruit_table_position := Vector3(4.51, -0.165, 2.32)
+@export var water_table_position := Vector3(4.94, -0.165, -2.14)
+@export var lamp_table_position := Vector3(5.1, -0.165, 0.9)
+@export var incense_table_position := Vector3(5.24, -0.165, -0.63)
+## Куда подносить — грудь объёмного Даттатрейи; вокруг этой точки обносятся лампада, благовония и вода
+@export var puja_center := Vector3(0.0, 2.3, -0.25)
+@export_group("")
 
 @export_group("Перемещение")
 @export var move_speed := 1.5
@@ -107,6 +116,10 @@ func _ready() -> void:
 	_offering = Offering.new()
 	add_child(_offering)
 	_offering.setup(cam, offering_table_position, flower_stand_position, tree.figure_position("datta"))
+	_offering.setup_puja({
+		Offering.Kind.FRUIT: fruit_table_position, Offering.Kind.LAMP: lamp_table_position,
+		Offering.Kind.INCENSE: incense_table_position, Offering.Kind.WATER: water_table_position,
+	}, puja_center, Vector3(mandala_center.x, -0.165, mandala_center.y))
 
 	_player = AudioStreamPlayer.new()
 	add_child(_player)
@@ -148,6 +161,9 @@ func _process(delta: float) -> void:
 	_stage.apply(_t, _fx)
 	# после подношения лепестков святые на время разгораются
 	_fx.tree_shine = maxf(_fx.tree_shine, 0.8 * _offering.glow)
+	# и сияние за объёмным Даттатрейей
+	if _fx.aura > 0.0:
+		_fx.aura += 0.6 * _offering.glow
 	if OS.has_environment("PRACTICE_DEBUG"):
 		print("PRACTICE frame=%d t=%.2f beams=%.2f white=%.2f" % [_frames, _t, _fx.center_beams, _fx.whiteout])
 	if not show_text:
@@ -235,6 +251,8 @@ func _start_stage(index: int, at: float) -> void:
 	_stage_index = index
 	_stage = STAGES[index].new()
 	_fx.reset()
+	# столы манасика-пуджи — только на этапе, где она есть
+	_offering.set_puja_visible(STAGES[index].get_script_constant_map().has("PUJA"))
 	_finished = false
 	_paused = false
 	_t = at

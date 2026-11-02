@@ -2,10 +2,14 @@ extends Node3D
 ## Подношение: два золотых стола — с блюдом лепестков и с целыми цветочными головками (роза, бархатец, лотос).
 ## Подойти к столу и нажать ЛКМ — в руке появляется золотой сосуд, в нём горсть лепестков
 ## или 20 цветков; ещё раз ЛКМ — поднести: они по очереди летят по дуге к Даттатрейе и растворяются искрами света.
+## Манасика-пуджа (этап с PUJA, setup_puja): ещё четыре стола — плоды (поднос летит к Даттатрейе, и вокруг него
+## встают горы плодов на золотых подносах), лампада, благовония, кувшин с водой (обносятся вокруг Даттатрейи
+## и возвращаются на свой стол).
 ## В VR то же самое будет через контроллер: взять со стола, бросить.
 
 const PETAL_SHADER := preload("res://src/practice/petal.gdshader")
 const AURA_SHADER := preload("res://src/practice/aura.gdshader")
+const PujaItems := preload("res://src/practice/puja_items.gd")
 
 ## Цвета лепестков на блюде: розы разных оттенков, белые, бархатцы
 const PETAL_COLORS := [
@@ -20,7 +24,19 @@ const HANDFUL := 40
 const FLOWERS_TAKEN := 20
 const REACH := 2.8          # с какого расстояния (по горизонтали) можно взять
 
-enum Kind { PETALS, FLOWER }
+enum Kind { PETALS, FLOWER, FRUIT, LAMP, INCENSE, WATER }
+
+## Предметы, которыми описывают круги перед Даттатрейей (как при аарти): размер в руке и в полёте (масштаб узла)
+const CIRCLE_KINDS := [Kind.LAMP, Kind.INCENSE, Kind.WATER]
+const HAND_SCALE := {Kind.LAMP: 0.34, Kind.INCENSE: 0.42, Kind.WATER: 0.5}
+const ORBIT_SCALE := {Kind.LAMP: 2.2, Kind.INCENSE: 2.4, Kind.WATER: 2.4}
+## Круг перед Даттатрейей: радиус, насколько впереди его груди (к практикующему), сколько оборотов
+const ORBIT_RADIUS := 0.85
+const ORBIT_FRONT := 1.5
+const ORBIT_TURNS := 3.0
+## Горы плодов перед Даттатрейей: радиус дуги от центра лотоса, углы (0 — к практикующему)
+const TRAY_RING := 3.3
+const TRAY_ANGLES := [-62.5, -37.5, -12.5, 12.5, 37.5, 62.5]
 
 ## Сияние святых после подношения (0..1, затухает) — практика добавляет его к сиянию древа
 var glow := 0.0
@@ -31,6 +47,7 @@ var _petal_mat: ShaderMaterial
 var _gold: StandardMaterial3D
 var _plate_gold: StandardMaterial3D
 var _vessel_gold: StandardMaterial3D
+var _foot_gold: StandardMaterial3D
 ## Сетки лепестков: розовые (с выемкой), заострённые (лотос), узкие кружевные (бархатец), чашелистики
 var _rose_petals: Array[ArrayMesh] = []
 var _lotus_petal: ArrayMesh
@@ -47,6 +64,13 @@ var _flying: Array[Dictionary] = []
 var _flashes: Array[Dictionary] = []
 var _hand_hint: Label3D
 var _rng := RandomNumberGenerator.new()
+## Манасика-пуджа
+var _puja: Node3D
+var _puja_center := Vector3.ZERO
+var _lotus_center := Vector3.ZERO
+var _fruit_trays: Node3D
+var _hand_item: Node3D        # предмет в руке (поднос с плодами, лампада, благовония, кувшин)
+var _hand_station := {}
 
 func setup(camera: Camera3D, petal_table_position: Vector3, flower_stand_position: Vector3, target: Vector3) -> void:
 	_camera = camera
@@ -118,6 +142,49 @@ func setup(camera: Camera3D, petal_table_position: Vector3, flower_stand_positio
 	_hand_hint.position = Vector3(0, -0.55, -1.2)
 	camera.add_child(_hand_hint)
 
+## Столы манасика-пуджи. positions — {Kind: позиция стола на полу}; center — куда подносить (грудь Даттатрейи);
+## lotus_center — центр лотоса на полу (вокруг него встают горы плодов)
+func setup_puja(positions: Dictionary, center: Vector3, lotus_center: Vector3) -> void:
+	_puja_center = center
+	_lotus_center = lotus_center
+	_puja = Node3D.new()
+	_puja.visible = false
+	add_child(_puja)
+	_fruit_trays = Node3D.new()
+	_puja.add_child(_fruit_trays)
+	var hints := {Kind.FRUIT: "ЛКМ — взять плоды", Kind.LAMP: "ЛКМ — взять лампаду",
+		Kind.INCENSE: "ЛКМ — взять благовония", Kind.WATER: "ЛКМ — взять кувшин с водой"}
+	for kind in positions:
+		var node := _add_station(positions[kind], kind, hints[kind], _puja)
+		var st: Dictionary = _stations[-1]
+		var item: Node3D
+		match kind:
+			Kind.FRUIT:
+				item = PujaItems.make_fruit_mound(_rng, 0.19, 0.16, 26, 0.8)
+			Kind.LAMP:
+				item = PujaItems.make_lamp(_gold)
+			Kind.INCENSE:
+				item = PujaItems.make_incense(_gold, _rng)
+			Kind.WATER:
+				item = PujaItems.make_water_jug(_gold)
+		item.position = Vector3(0, 0.83, 0)
+		node.add_child(item)
+		st["item"] = item
+		st["home"] = item.transform
+
+## Столы и горы плодов видны только на этапе пуджи; предмет из руки возвращается на место
+func set_puja_visible(v: bool) -> void:
+	if _puja == null or _puja.visible == v:
+		return
+	_puja.visible = v
+	if not v and _hand_item:
+		if _holding == Kind.FRUIT:
+			_hand_item.queue_free()
+		else:
+			_return_home(_hand_station)
+		_hand_item = null
+		_holding = -1
+
 ## Нажатие «действие» (ЛКМ / курок контроллера): взять со стола рядом или поднести то, что в руке
 func interact() -> void:
 	if _holding == Kind.PETALS:
@@ -126,10 +193,32 @@ func interact() -> void:
 	if _holding == Kind.FLOWER:
 		_offer_flower()
 		return
+	if _holding == Kind.FRUIT:
+		_offer_fruit()
+		return
+	if _holding in CIRCLE_KINDS:
+		_offer_circle()
+		return
 	var st := _nearest_station()
 	if st.is_empty():
 		return
 	_holding = st.kind
+	if st.kind == Kind.FRUIT:
+		# золотой поднос с плодами в руке, наклонён к глазам
+		_hand_item = PujaItems.make_fruit_tray(_rng, _vessel_gold, 0.1, 0.34, 110)
+		_hand_item.rotation.x = 0.5
+		_hand.add_child(_hand_item)
+		_hand_hint.text = "ЛКМ — поднести плоды"
+		return
+	if st.kind in CIRCLE_KINDS:
+		st.busy = true
+		_hand_station = st
+		_hand_item = st.item
+		_hand_item.reparent(_hand, false)
+		_hand_item.transform = Transform3D(Basis().scaled(Vector3.ONE * HAND_SCALE[st.kind]), Vector3(0.0, -0.08, -0.05))
+		_hand_hint.text = {Kind.LAMP: "ЛКМ — поднести огонь", Kind.INCENSE: "ЛКМ — поднести благовония",
+			Kind.WATER: "ЛКМ — поднести воду"}[st.kind]
+		return
 	_vessel.visible = true
 	if st.kind == Kind.PETALS:
 		_vessel_petals.visible = true
@@ -153,6 +242,8 @@ func _nearest_station() -> Dictionary:
 	var best := {}
 	var best_d := REACH
 	for st in _stations:
+		if st.get("busy", false) or not (st.node as Node3D).is_visible_in_tree():
+			continue
 		var d: Vector3 = _camera.global_position - (st.node as Node3D).global_position
 		var dist := Vector2(d.x, d.z).length()
 		if dist < best_d:
@@ -196,6 +287,106 @@ func _offer_flower() -> void:
 		_fly(f, size, Vector3(_rng.randf_range(-0.8, 0.8), _rng.randf_range(-0.5, 0.7), 0.3),
 			-0.1 * i, _rng.randf_range(2.3, 2.8), 1.2, 0.05, 0.04)
 	_hand_flowers.clear()
+
+## Плоды: поднос летит к Даттатрейе и растворяется во вспышке, а вокруг лотоса встают горы плодов на подносах
+func _offer_fruit() -> void:
+	_holding = -1
+	var tray := _hand_item
+	_hand_item = null
+	tray.reparent(get_parent(), true)
+	var from := tray.global_position
+	var s0 := tray.global_transform.basis.get_scale().x
+	var tw := create_tween()
+	tw.tween_method(_fruit_flight.bind(tray, from, s0), 0.0, 1.0, 1.8)
+	tw.tween_callback(_fruit_arrived.bind(tray))
+
+func _fruit_flight(u: float, tray: Node3D, from: Vector3, s0: float) -> void:
+	var e := u * u * (3.0 - 2.0 * u)
+	var p := from.lerp(_puja_center, e) + Vector3.UP * 1.2 * sin(PI * u)
+	tray.global_transform = Transform3D(Basis().scaled(Vector3.ONE * lerpf(s0, s0 * 6.0, e)), p)
+
+func _fruit_arrived(tray: Node3D) -> void:
+	_flash(_puja_center, 2.5)
+	tray.queue_free()
+	glow = minf(1.0, glow + 0.7)
+	_raise_fruit_trays()
+
+func _raise_fruit_trays() -> void:
+	if _fruit_trays.get_child_count() > 0:
+		for t in _fruit_trays.get_children():
+			_flash((t as Node3D).global_position + Vector3.UP * 0.6, 1.4)
+		return
+	for i in TRAY_ANGLES.size():
+		var a := deg_to_rad(TRAY_ANGLES[i])
+		var tray := PujaItems.make_fruit_tray(_rng, _gold, 0.7, 1.8, 130)
+		_fruit_trays.add_child(tray)
+		var pos := _lotus_center + Vector3(sin(a), 0.0, cos(a)) * TRAY_RING
+		tray.global_position = pos
+		tray.rotation.y = _rng.randf() * TAU
+		tray.scale = Vector3.ONE * 0.01
+		var tw := create_tween()
+		tw.tween_interval(0.25 * i)
+		tw.tween_callback(_flash.bind(pos + Vector3.UP * 0.5, 1.6))
+		tw.tween_property(tray, "scale", Vector3.ONE, 0.9).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+## Лампада, благовония, вода: предмет слетает с руки к Даттатрейе и описывает перед ним круги по часовой стрелке
+## (как видит практикующий; как при аарти), потом возвращается на свой стол
+func _offer_circle() -> void:
+	var st := _hand_station
+	var item := _hand_item
+	_holding = -1
+	_hand_item = null
+	_hand_station = {}
+	item.reparent(get_parent(), true)
+	# плоскость круга — перед Даттатрейей, лицом к практикующему
+	var to_cam := _camera.global_position - _puja_center
+	to_cam.y = 0.0
+	to_cam = to_cam.normalized()
+	var center := _puja_center + to_cam * ORBIT_FRONT
+	var right := (-to_cam).cross(Vector3.UP).normalized()   # вправо для практикующего
+	var p0 := center + Vector3.UP * ORBIT_RADIUS              # начало круга — сверху
+	var s_hand := item.global_transform.basis.get_scale().x
+	var s_orbit: float = ORBIT_SCALE[st.kind]
+	var tw := create_tween()
+	tw.tween_method(_circle_go.bind(item, item.global_position, p0, s_hand, s_orbit), 0.0, 1.0, 1.5)
+	tw.tween_callback(_set_drops.bind(item, true))
+	tw.tween_method(_circle_orbit.bind(item, center, right, s_orbit), 0.0, 1.0, 10.0)
+	tw.tween_callback(_set_drops.bind(item, false))
+	tw.tween_method(_circle_back.bind(item, st, p0, s_orbit), 0.0, 1.0, 2.0)
+	tw.tween_callback(_return_home.bind(st))
+
+func _place(item: Node3D, p: Vector3, s: float) -> void:
+	item.global_transform = Transform3D(Basis().scaled(Vector3.ONE * s), p)
+
+func _circle_go(u: float, item: Node3D, from: Vector3, p0: Vector3, s0: float, s1: float) -> void:
+	var e := u * u * (3.0 - 2.0 * u)
+	_place(item, from.lerp(p0, e) + Vector3.UP * 0.5 * sin(PI * u), lerpf(s0, s1, e))
+
+func _circle_orbit(u: float, item: Node3D, center: Vector3, right: Vector3, s: float) -> void:
+	# сверху → вправо → вниз → влево: по часовой стрелке для практикующего
+	var ang := TAU * ORBIT_TURNS * u
+	var p := center + (Vector3.UP * cos(ang) + right * sin(ang)) * ORBIT_RADIUS
+	_place(item, p, s)
+	glow = maxf(glow, 0.6 * sin(PI * u))
+
+func _circle_back(u: float, item: Node3D, st: Dictionary, p0: Vector3, s0: float) -> void:
+	var home: Transform3D = (st.node as Node3D).global_transform * (st.home as Transform3D)
+	var e := u * u * (3.0 - 2.0 * u)
+	_place(item, p0.lerp(home.origin, e) + Vector3.UP * 0.8 * sin(PI * u), lerpf(s0, home.basis.get_scale().x, e))
+
+func _set_drops(item: Node3D, on: bool) -> void:
+	var drops := item.get_node_or_null("Drops") as GPUParticles3D
+	if drops:
+		drops.emitting = on
+
+func _return_home(st: Dictionary) -> void:
+	var item: Node3D = st.item
+	item.reparent(st.node, false)
+	item.transform = st.home
+	var drops := item.get_node_or_null("Drops") as GPUParticles3D
+	if drops:
+		drops.emitting = false
+	st.busy = false
 
 func _fly(node: Node3D, size: float, spread: Vector3, delay: float, dur: float, spin: float, flutter: float, glow_add: float) -> void:
 	node.scale = Vector3.ONE * size
@@ -301,6 +492,12 @@ func _make_materials() -> void:
 	_vessel_gold.rim_enabled = true
 	_vessel_gold.rim = 0.4
 	_vessel_gold.rim_tint = 0.8
+	# подножие столов: золото без зеркального отражения пола
+	_foot_gold = StandardMaterial3D.new()
+	_foot_gold.albedo_color = Color(0.85, 0.62, 0.28)
+	_foot_gold.metallic = 0.5
+	_foot_gold.roughness = 0.6
+	_foot_gold.metallic_specular = 0.2
 	for i in 6:
 		_rose_petals.append(_make_petal_mesh(_rng.randf_range(0.075, 0.095), _rng.randf_range(0.07, 0.088),
 			_rng.randf_range(0.4, 0.75), _rng.randf_range(0.1, 0.3), _rng.randf_range(0.1, 0.5), 0))
@@ -431,11 +628,11 @@ func _make_petal_mesh(length: float, width: float, cup: float, bend: float, flar
 
 # ---------- столы ----------
 
-func _add_station(at: Vector3, kind: Kind, hint_text: String) -> Node3D:
+func _add_station(at: Vector3, kind: Kind, hint_text: String, parent: Node3D = null) -> Node3D:
 	var node := Node3D.new()
 	node.position = at
 	node.scale = Vector3.ONE * SCALE
-	add_child(node)
+	(parent if parent else self).add_child(node)
 	_build_table(node)
 	# Тёплый свет над столом — чтобы золото и лепестки сияли (без блика на зеркальном полу — он мигал как битый пиксель)
 	var lamp := OmniLight3D.new()
@@ -456,9 +653,14 @@ func _add_station(at: Vector3, kind: Kind, hint_text: String) -> Node3D:
 
 ## Резной круглый столик: профиль вращается вокруг оси (основание, колонна с бусинами, столешница, блюдо)
 func _build_table(parent: Node3D) -> void:
+	# подножие — матовое: пологий зеркальный купол отражал фиолетовый пол и казался дырой, а ножка — сломанной
+	var foot := [
+		Vector2(0.0, 0.0), Vector2(0.29, 0.0), Vector2(0.32, 0.015), Vector2(0.31, 0.035), Vector2(0.26, 0.05),
+		Vector2(0.24, 0.065), Vector2(0.18, 0.08), Vector2(0.11, 0.12), Vector2(0.075, 0.19),
+	]
+	_lathe(parent, foot, _foot_gold, 64)
 	var table := [
-		Vector2(0.29, 0.0), Vector2(0.32, 0.015), Vector2(0.31, 0.035), Vector2(0.26, 0.05),
-		Vector2(0.24, 0.065), Vector2(0.18, 0.08), Vector2(0.11, 0.12), Vector2(0.075, 0.19), Vector2(0.06, 0.26),
+		Vector2(0.075, 0.19), Vector2(0.06, 0.26),
 		Vector2(0.085, 0.29), Vector2(0.095, 0.31), Vector2(0.085, 0.33), Vector2(0.06, 0.35), Vector2(0.05, 0.45),
 		Vector2(0.048, 0.52), Vector2(0.07, 0.55), Vector2(0.08, 0.57), Vector2(0.07, 0.59), Vector2(0.06, 0.62),
 		Vector2(0.09, 0.66), Vector2(0.15, 0.70), Vector2(0.25, 0.735), Vector2(0.40, 0.755), Vector2(0.43, 0.765),

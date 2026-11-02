@@ -79,9 +79,9 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 	_eyes_mat.shader = RADIANCE_SHADER
 	_eyes_mat.set_shader_parameter("color", Color(0.85, 0.95, 1.0))
 	for p in parts:
-		if p.name == "lotos":
-			continue
-		_parts.append(p)
+		# лотос основного божества остаётся на месте; его копия — лотос под практикующим
+		if p.name != "lotos":
+			_parts.append(p)
 		var copy := p.duplicate() as Node3D
 		copy.visible = true
 		copy.transform = Transform3D.IDENTITY
@@ -98,7 +98,7 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 			if head:
 				g.layers = MIRROR_ONLY_LAYER
 			# достроенные затылок, шея и плечи — без светящегося контура (иначе видны как отдельные белёсые формы)
-			if not mesh_name.begins_with(HEAD_BACK):
+			if not mesh_name.begins_with(HEAD_BACK) and p.name != "lotos":
 				g.material_overlay = _eyes_mat if mesh_name == "Glasa_low" else _radiance_mat
 		for a in copy.find_children("*", "Area3D", true, false):
 			a.queue_free()
@@ -124,7 +124,9 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 
 	# зеркало: отражение рисует камера за плоскостью зеркала в отдельный SubViewport
 	_viewport = SubViewport.new()
-	_viewport.size = Vector2i(800, int(800.0 * MIRROR_SIZE.y / MIRROR_SIZE.x))
+	# зеркало крупное и близко — отражению нужно высокое разрешение и сглаживание, иначе руки и плечи «лесенкой»
+	_viewport.size = Vector2i(1500, int(1500.0 * MIRROR_SIZE.y / MIRROR_SIZE.x))
+	_viewport.msaa_3d = Viewport.MSAA_4X
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(_viewport)
 	_mirror_cam = Camera3D.new()
@@ -156,10 +158,13 @@ static func _is_lower_arm_or_torso(center: Vector3, box: AABB) -> bool:
 	return not (box.end.z < 0.0 and absf(center.x) > 0.2)
 
 ## Обрывки спинной панели, к которой крепились верхние руки: торчали крыльями за плечами
+## (в зеркале торчали лоскутом над плечом): у спинной панели убираем края за плечами и верх у плеч
 static func _is_arm_stub(p: Vector3, box: AABB) -> bool:
-	return box.end.z < -0.25 and absf(p.x) > SHOULDER_HALF_WIDTH
+	if box.end.z >= -0.25:
+		return false
+	return absf(p.x) > SHOULDER_HALF_WIDTH or (absf(p.x) > 0.2 and p.y > 2.48)
 
-const SHOULDER_HALF_WIDTH := 0.36
+const SHOULDER_HALF_WIDTH := 0.3
 ## Имя затылка, который достраивается к центральной голове (у модели затылок общий для трёх голов)
 const HEAD_BACK := "HeadBack"
 
@@ -189,30 +194,11 @@ static func make_meditation_body(part: Node3D) -> void:
 		elif FACE_MESHES.has(mesh_name):
 			BodyStrip.strip(mi, to_model, _is_central_head)
 	if is_head:
-		_add_head_back(part)
+		_add_neck_back(part)
 
-## Затылок и задняя сторона шеи: у модели они общие для трёх голов и убраны вместе с боковыми — без них
-## голова — маска лица с прямыми срезами. Затылок — полусфера в цвет волос, шея — цилиндр в цвет кожи.
-static func _add_head_back(parent: Node3D) -> void:
-	var hair := StandardMaterial3D.new()
-	hair.albedo_color = Color(0.2, 0.14, 0.1)
-	hair.roughness = 0.9
-	hair.metallic_specular = 0.1   # без отражения неба — иначе затылок синеет
-	var dome := MeshInstance3D.new()
-	dome.name = HEAD_BACK
-	var s := SphereMesh.new()
-	s.radius = 1.0
-	s.height = 2.0
-	s.is_hemisphere = true
-	s.radial_segments = 32
-	s.rings = 12
-	dome.mesh = s
-	dome.material_override = hair
-	# купол полусферы (+Y) смотрит назад (−Z); ширина, глубина, высота головы
-	var b := Basis(Vector3.RIGHT, -PI / 2.0)
-	dome.transform = Transform3D(b.scaled(Vector3(0.19, 0.3, 0.25)), Vector3(0.0, 3.06, -0.24))
-	parent.add_child(dome)
-
+## Задняя сторона шеи: у модели она общая для трёх голов и убрана вместе с боковыми — без неё шея с прямыми
+## срезами. Затылок не нужен: его закрывают волосы центральной головы (достроенный купол торчал тёмным пятном).
+static func _add_neck_back(parent: Node3D) -> void:
 	var skin := StandardMaterial3D.new()
 	skin.albedo_color = Color(0.86, 0.66, 0.56)
 	skin.roughness = 0.6
@@ -221,11 +207,11 @@ static func _add_head_back(parent: Node3D) -> void:
 	var c := CylinderMesh.new()
 	c.top_radius = 0.1
 	c.bottom_radius = 0.12
-	c.height = 0.42
+	c.height = 0.34
 	c.radial_segments = 24
 	neck.mesh = c
 	neck.material_override = skin
-	neck.position = Vector3(0.0, 2.76, -0.3)
+	neck.position = Vector3(0.0, 2.67, -0.35)
 	parent.add_child(neck)
 
 ## Только центральная голова: боковые лица, глаза и серьги — в стороне от середины; пучки и волосы боковых
