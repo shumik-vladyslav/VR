@@ -10,6 +10,7 @@ uniform float halo : hint_range(0.0, 2.0) = 1.0;        // пятицветно�
 uniform float rays_out : hint_range(0.0, 2.0) = 0.0;    // лучи от знака во все стороны
 uniform float rays_in : hint_range(0.0, 2.0) = 0.0;     // лучи к знаку из пространства
 uniform vec4 glyph_color : source_color = vec4(1.0, 0.85, 0.45, 1.0);
+uniform vec4 rays_tint : source_color = vec4(1.0, 1.0, 1.0, 0.0);   // цвет лучей наружу; альфа — доля вместо пяти цветов
 uniform bool billboard = false;     // всегда лицом к зрителю (большой Ом в центре)
 
 void vertex() {
@@ -68,7 +69,7 @@ void fragment() {
 	float beams = pow(0.5 + 0.5 * cos(ang * 12.0 + sin(ang * 5.0 + TIME * 0.3)), 18.0);
 	float wave_out = 0.5 + 0.5 * sin(r * 14.0 - TIME * 3.0);
 	float fade = smoothstep(1.0, 0.25, r) * smoothstep(0.08, 0.2, r);
-	col += five(ang / TAU) * beams * (0.35 + 0.65 * wave_out) * fade * rays_out * 0.7;
+	col += mix(five(ang / TAU), rays_tint.rgb, rays_tint.a) * beams * (0.35 + 0.65 * wave_out) * fade * rays_out * 0.7;
 
 	// Лучи внутрь: волны бегут к центру, свет белый
 	float wave_in = 0.5 + 0.5 * sin(r * 14.0 + TIME * 3.0);

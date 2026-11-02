@@ -75,6 +75,13 @@ var ray_flowers := -1.0
 var red_flowers := 0.0
 var red_circle := 0.0
 var red_toss := 0.0
+## Запечатывание и посвящение заслуг: искры чистого видения 0..1; волна света от груди практикующего —
+## фаза 0..1 (−1 — нет), яркость и цвет; цвет лучей знака у груди (альфа — насколько заменить пять цветов)
+var sparkle := 0.0
+var ring_phase := -1.0
+var ring_strength := 0.0
+var ring_color := Color(1.0, 0.88, 0.62)
+var rays_tint := Color(1.0, 1.0, 1.0, 0.0)
 
 ## Древо Прибежища (refuge_tree.gd), если есть
 var tree: Node3D
@@ -283,6 +290,8 @@ func reset() -> void:
 	tree_focus = {}; tree_grow = 0.0; tree_others = 1.0
 	sun = 0.0; shiva = 0.0; shiva_flash = 0.0; wave_phase = -1.0; wave_strength = 0.0
 	ray_flowers = -1.0; red_flowers = 0.0; red_circle = 0.0; red_toss = 0.0
+	sparkle = 0.0; ring_phase = -1.0; ring_strength = 0.0; ring_color = Color(1.0, 0.88, 0.62)
+	rays_tint = Color(1.0, 1.0, 1.0, 0.0)
 
 func commit() -> void:
 	_commit_datta()
@@ -292,6 +301,7 @@ func commit() -> void:
 	om.set_shader_parameter("halo", om_halo)
 	om.set_shader_parameter("rays_out", rays_out)
 	om.set_shader_parameter("rays_in", rays_in)
+	om.set_shader_parameter("rays_tint", rays_tint)
 	_om.visible = om_intensity + om_halo + rays_out + rays_in > 0.002
 	_set_picture(_om_image, om_intensity * 1.6, 1.0 + 0.5 * om_halo)
 
@@ -338,6 +348,7 @@ func commit() -> void:
 		tree.grow_target = SceneExtras.WAVE_CENTER + Vector3(0.0, 0.1, 0.5)
 		tree.others = tree_others
 	_extras.commit(sun, shiva, shiva_flash, wave_phase, wave_strength)
+	_extras.commit_vision(sparkle, om_world_position(), ring_phase, ring_strength, ring_color)
 
 	_title.text = title
 	_text.text = text

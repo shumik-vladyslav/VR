@@ -11,6 +11,8 @@ const STAGES := [
 	preload("res://src/practice/stage5_three_rays.gd"),
 	preload("res://src/practice/stage6_transformation.gd"),
 	preload("res://src/practice/stage7_datta_stava.gd"),
+	preload("res://src/practice/stage8_sealing.gd"),
+	preload("res://src/practice/stage9_dedication.gd"),
 ]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
 const RefugeTree := preload("res://src/practice/refuge_tree.gd")
@@ -268,6 +270,11 @@ func _start_stage(index: int, at: float) -> void:
 	_finished = false
 	_paused = false
 	_t = at
+	# этап без записи (пока её нет) идёт по часам, ведут подписи
+	if _stage.AUDIO.is_empty():
+		_player.stop()
+		_player.stream = null
+		return
 	_player.stream = load(_stage.AUDIO)
 	_player.play(at)
 
@@ -305,8 +312,9 @@ func _seek_cue(direction: int) -> void:
 		_next_stage()
 		return
 	_t = target
-	_player.play(target)
-	_player.stream_paused = _paused
+	if _player.stream:
+		_player.play(target)
+		_player.stream_paused = _paused
 
 func _set_paused(p: bool) -> void:
 	_paused = p
