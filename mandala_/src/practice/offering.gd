@@ -519,5 +519,6 @@ func _label(text: String, font_size: int) -> Label3D:
 	l.outline_modulate = Color(0.05, 0.03, 0.1, 0.6)
 	l.no_depth_test = true
 	l.render_priority = 50
+	l.layers = 4   # подсказки не попадают в отражение зеркала (transformation.gd OVERLAY_LAYER)
 	l.outline_render_priority = 49
 	return l

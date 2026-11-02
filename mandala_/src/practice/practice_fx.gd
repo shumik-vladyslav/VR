@@ -9,6 +9,7 @@ const VEIL_SHADER := preload("res://src/practice/light_veil.gdshader")
 const BEAM_SHADER := preload("res://src/practice/light_beam.gdshader")
 const PANEL_SHADER := preload("res://src/practice/text_panel.gdshader")
 const RAY_SHADER := preload("res://src/practice/ray_beam.gdshader")
+const Transformation := preload("res://src/practice/transformation.gd")
 const OM_GLYPH := preload("res://images/om_glyph.png")
 
 const BEAM_COUNT := 44          # лучей во все стороны
@@ -45,6 +46,13 @@ var ray_white := 0.0
 var ray_red := 0.0
 var ray_blue := 0.0
 var ray_phase := 0.0
+## Преображение (transformation.gd): 1 — практикующий преобразился; аура, сияние кожи, глаз, свет из тела; зеркало
+var merge := 0.0
+var body_glow := 0.0
+var radiance := 0.0
+var eyes_glow := 0.0
+var body_light := 0.0
+var mirror := 0.0
 
 ## Древо Прибежища (refuge_tree.gd), если есть
 var tree: Node3D
@@ -87,6 +95,7 @@ var _rays: Array[MeshInstance3D] = []
 var _ray_glows: Array[MeshInstance3D] = []
 var _ray_hits: Array[MeshInstance3D] = []
 var _datta_light: MeshInstance3D
+var _transformation
 
 func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_camera = camera
@@ -201,7 +210,18 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_text.position = Vector3(0, 1.5, -2.4)
 	_text.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	camera.add_child(_text)
+	# то, что висит у глаз, не должно попадать в отражение зеркала
+	for v in [_veil, _panel, _title, _text, _om]:
+		(v as VisualInstance3D).layers = Transformation.OVERLAY_LAYER
 	commit()
+
+## Подключить преображение (этап 6) — после того, как заданы datta_parts
+func setup_transformation() -> void:
+	if datta_parts.is_empty():
+		return
+	_transformation = Transformation.new()
+	add_child(_transformation)
+	_transformation.setup(_camera, _om_pivot, datta_parts)
 
 ## Перенести знак Ом к практикующему: позиция глаз и поворот головы по горизонтали
 func follow(eye_position: Vector3, yaw: float) -> void:
@@ -218,6 +238,7 @@ func reset() -> void:
 	center_beams = 0.0; center_pulse = -1.0
 	datta_reveal = 0.0; datta_light = 0.0
 	ray_white = 0.0; ray_red = 0.0; ray_blue = 0.0; ray_phase = 0.0
+	merge = 0.0; body_glow = 0.0; radiance = 0.0; eyes_glow = 0.0; body_light = 0.0; mirror = 0.0
 
 func commit() -> void:
 	_commit_datta()
@@ -281,6 +302,19 @@ func _commit_datta() -> void:
 	(_datta_light.material_override as ShaderMaterial).set_shader_parameter("intensity", 6.0 * l)
 	_datta_light.visible = l > 0.002
 	var shown := datta_reveal > 0.5
+	if _transformation:
+		# практикующий может преобразиться в божество медитации (этап 6); Даттатрейя и лотос — на месте
+		_transformation.merge = merge
+		_transformation.body_glow = body_glow
+		_transformation.radiance = radiance
+		_transformation.eyes_glow = eyes_glow
+		_transformation.body_light = body_light
+		_transformation.mirror = mirror
+		_transformation.commit(shown)
+		for part in datta_parts:
+			if part.name == "lotos":
+				part.visible = shown
+		return
 	for part in datta_parts:
 		part.visible = shown
 

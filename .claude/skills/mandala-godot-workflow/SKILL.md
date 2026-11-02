@@ -87,6 +87,11 @@ $env:SCENE="res://teurgia1.tscn"; $env:OUT="<scratchpad>\shot.png"; $env:CAM="0,
 ### Очистка записи — `denoise_audio.py`
 `& $B --background --factory-startup --python "$S\denoise_audio.py" -- in.mp3 mandala_\audio\teurgia1\name.ogg` — шум ≈ −11 дБ, паузы находит сам. Таймкоды мантр находи по огибающей громкости: пропетые места громче (≈ −35 дБ) пояснений (≈ −47 дБ).
 
+### Что говорится в записи — Whisper (распознавание речи, локально)
+Перед тем как ставить эффекты этапа, распознай запись — смысл этапа и моменты берутся из неё, а не из догадок по паузам.
+1. WAV 16 кГц моно через Blender `aud`: `aud.Sound(in).resample(16000, True).rechannel(1).write(out.wav, 16000, aud.CHANNELS_MONO, aud.FORMAT_S16, aud.CONTAINER_WAV, aud.CODEC_PCM)`.
+2. `C:\Users\shumi\tools\whisper\bin\Release\whisper-cli.exe -m C:\Users\shumi\tools\whisper\ggml-small.bin -l ru -t 8 -f out.wav` — печатает фразы с таймкодами `[мм:сс.ммм --> мм:сс.ммм]`. Имена и санскрит путает («Дататрия», «Годы Словений» = «волны благословений») — смысл и время верные.
+
 ### Вырезание фигур из картинки — `cut_figures.py`
 Разметка `layout.json` (круг-медальон или рамка/эллипс с вырезанием фиолетового фона, `"base": false` — без подставки), затем `& $B ... --python "$S\cut_figures.py" -- <папка> --preview <scratchpad>` → `parts/*.png` + `parts.json`. Для новых PNG создай `.import` как для 3D (см. выше).
 

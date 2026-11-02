@@ -9,6 +9,7 @@ const STAGES := [
 	preload("res://src/practice/stage3_om21.gd"),
 	preload("res://src/practice/stage4_refuge.gd"),
 	preload("res://src/practice/stage5_three_rays.gd"),
+	preload("res://src/practice/stage6_transformation.gd"),
 ]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
 const RefugeTree := preload("res://src/practice/refuge_tree.gd")
@@ -100,6 +101,7 @@ func _ready() -> void:
 	_fx.datta_parts = datta_parts
 	# сияние святых — за Даттой в центре древа
 	_fx.setup(cam, tree.figure_position("datta") + Vector3(0, 0.25, -0.5))
+	_fx.setup_transformation()
 	_apply_camera()
 
 	_offering = Offering.new()
