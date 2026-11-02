@@ -10,6 +10,7 @@ const BEAM_SHADER := preload("res://src/practice/light_beam.gdshader")
 const PANEL_SHADER := preload("res://src/practice/text_panel.gdshader")
 const RAY_SHADER := preload("res://src/practice/ray_beam.gdshader")
 const Transformation := preload("res://src/practice/transformation.gd")
+const SceneExtras := preload("res://src/practice/scene_extras.gd")
 const OM_GLYPH := preload("res://images/om_glyph.png")
 
 const BEAM_COUNT := 44          # лучей во все стороны
@@ -53,6 +54,24 @@ var radiance := 0.0
 var eyes_glow := 0.0
 var body_light := 0.0
 var mirror := 0.0
+## Древо: подсветка рядов {ряд: 0..1}; центральный Даттатрейя растёт (0..1), остальные фигуры гаснут (others 1 → 0)
+var tree_focus := {}
+var tree_grow := 0.0
+var tree_others := 1.0
+## Солнце Сурьи над древом; Шива (> 0.5 — виден) и вспышка, в которой он появляется/уходит
+var sun := 0.0
+var shiva := 0.0
+var shiva_flash := 0.0
+## Волна благословения от Даттатрейи: фаза 0..1 (−1 — нет) и яркость
+var wave_phase := -1.0
+var wave_strength := 0.0
+## Подношения, которые идут прямо по записи (offering.gd apply_rituals):
+## цветы на кончиках лучей Ом летят к святым — ход 0..1 (−1 — нет);
+## пригоршня красных цветов в руке: видна 0..1, обносится кругами (число оборотов), подбрасывается к древу 0..1
+var ray_flowers := -1.0
+var red_flowers := 0.0
+var red_circle := 0.0
+var red_toss := 0.0
 
 ## Древо Прибежища (refuge_tree.gd), если есть
 var tree: Node3D
@@ -96,6 +115,7 @@ var _ray_glows: Array[MeshInstance3D] = []
 var _ray_hits: Array[MeshInstance3D] = []
 var _datta_light: MeshInstance3D
 var _transformation
+var _extras
 
 func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_camera = camera
@@ -213,7 +233,14 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	# то, что висит у глаз, не должно попадать в отражение зеркала
 	for v in [_veil, _panel, _title, _text, _om]:
 		(v as VisualInstance3D).layers = Transformation.OVERLAY_LAYER
+	_extras = SceneExtras.new()
+	add_child(_extras)
+	_extras.setup(camera.global_position)
 	commit()
+
+## Где сейчас знак Ом у груди практикующего (мировые координаты) — отсюда идут лучи и цветы-подношения
+func om_world_position() -> Vector3:
+	return _om.global_position
 
 ## Подключить преображение (этап 6) — после того, как заданы datta_parts
 func setup_transformation() -> void:
@@ -239,6 +266,9 @@ func reset() -> void:
 	datta_reveal = 0.0; datta_light = 0.0
 	ray_white = 0.0; ray_red = 0.0; ray_blue = 0.0; ray_phase = 0.0
 	merge = 0.0; body_glow = 0.0; radiance = 0.0; eyes_glow = 0.0; body_light = 0.0; mirror = 0.0
+	tree_focus = {}; tree_grow = 0.0; tree_others = 1.0
+	sun = 0.0; shiva = 0.0; shiva_flash = 0.0; wave_phase = -1.0; wave_strength = 0.0
+	ray_flowers = -1.0; red_flowers = 0.0; red_circle = 0.0; red_toss = 0.0
 
 func commit() -> void:
 	_commit_datta()
@@ -287,6 +317,11 @@ func commit() -> void:
 	if tree:
 		tree.reveal = tree_reveal
 		tree.shine = tree_shine
+		tree.focus = tree_focus
+		tree.grow = tree_grow
+		tree.grow_target = SceneExtras.WAVE_CENTER + Vector3(0.0, 0.1, 0.5)
+		tree.others = tree_others
+	_extras.commit(sun, shiva, shiva_flash, wave_phase, wave_strength)
 
 	_title.text = title
 	_text.text = text

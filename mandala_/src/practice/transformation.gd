@@ -158,11 +158,12 @@ static func _is_lower_arm_or_torso(center: Vector3, box: AABB) -> bool:
 	return not (box.end.z < 0.0 and absf(center.x) > 0.2)
 
 ## Обрывки спинной панели, к которой крепились верхние руки: торчали крыльями за плечами
-## (в зеркале торчали лоскутом над плечом): у спинной панели убираем края за плечами и верх у плеч
+## (в зеркале торчали лоскутом и линиями над плечом): у спинной панели убираем края за плечами и весь верх —
+## спину сзади в зеркале не видно
 static func _is_arm_stub(p: Vector3, box: AABB) -> bool:
 	if box.end.z >= -0.25:
 		return false
-	return absf(p.x) > SHOULDER_HALF_WIDTH or (absf(p.x) > 0.2 and p.y > 2.48)
+	return absf(p.x) > SHOULDER_HALF_WIDTH or p.y > 1.8
 
 const SHOULDER_HALF_WIDTH := 0.3
 ## Имя затылка, который достраивается к центральной голове (у модели затылок общий для трёх голов)

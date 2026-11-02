@@ -23,10 +23,19 @@ const GLOW_SHADER := preload("res://src/practice/figure_glow.gdshader")
 var reveal := 0.0
 ## 0..1 — дополнительное сияние фигур
 var shine := 0.0
+## Подсветка рядов, о которых говорит ведущий: номер ряда (0 — верх) -> 0..1
+var focus := {}
+## Центральный Даттатрейя растёт и выходит вперёд (0..1) к точке grow_target; остальные фигуры гаснут (others 1 → 0)
+var grow := 0.0
+var grow_target := Vector3.ZERO
+var others := 1.0
+const GROW_ID := "datta"
+const GROW_SCALE := 2.6
 
 var _sprites: Array[Sprite3D] = []
 var _rows: Array[int] = []
 var _base_pos: Array[Vector3] = []
+var _base_pixel: Array[float] = []
 var _glows: Array[MeshInstance3D] = []
 var _glow_offset: Array[Vector3] = []
 var _row_count := 1
@@ -62,6 +71,7 @@ func build(camera_position: Vector3) -> void:
 		_sprites.append(s)
 		_rows.append(row)
 		_base_pos.append(s.position)
+		_base_pixel.append(s.pixel_size)
 
 		# лучи сияния чуть позади фигуры (дальше от камеры); фигура занимает ~57% радиуса квада (figure_radius в шейдере)
 		var g := MeshInstance3D.new()
@@ -88,23 +98,46 @@ func figure_position(id: String) -> Vector3:
 			return s.global_position
 	return global_position
 
+## Мировые позиции всех фигур — куда летят подношения
+func figure_positions() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for s in _sprites:
+		out.append(s.global_position)
+	return out
+
 func _process(delta: float) -> void:
 	_time += delta
 	apply()
 
 func apply() -> void:
+	# пока о каком-то ряде говорят, остальные чуть приглушены — так видно, о ком речь
+	var any_focus := 0.0
+	for v in focus.values():
+		any_focus = maxf(any_focus, v)
 	for i in _sprites.size():
 		var s := _sprites[i]
 		# всё древо проявляется разом — так края вырезанных фигур меньше заметны
 		var a := smoothstep(0.0, 1.0, reveal)
+		var growing := s.name == GROW_ID and grow > 0.0
+		if not growing:
+			a *= others
 		s.visible = a > 0.002
-		var glow := 1.0 + 0.3 * shine * (0.75 + 0.25 * sin(_time * 1.3 + float(_rows[i]) * 0.7))
+		var f: float = focus.get(_rows[i], 0.0)
+		var glow := 1.0 + 0.3 * shine * (0.75 + 0.25 * sin(_time * 1.3 + float(_rows[i]) * 0.7)) + 0.35 * f
+		glow *= 1.0 - 0.4 * any_focus * (1.0 - f)
 		s.modulate = Color(glow, glow, glow, a)
-		# лёгкое «дыхание» — фигуры чуть парят
+		# лёгкое «дыхание» — фигуры чуть парят; названный ряд чуть крупнее
 		s.position = _base_pos[i] + Vector3(0, 0.012 * sin(_time * 0.6 + float(i) * 1.7), 0)
-		# все фигуры светятся, свет медленно дышит у каждой по-своему
+		s.pixel_size = _base_pixel[i] * (1.0 + 0.12 * f)
+		if growing:
+			var e := grow * grow * (3.0 - 2.0 * grow)
+			s.global_position = s.global_position.lerp(grow_target, e)
+			s.pixel_size = _base_pixel[i] * lerpf(1.0, GROW_SCALE, e)
+		# все фигуры светятся, свет медленно дышит у каждой по-своему; названный ряд — ярко
 		var g := _glows[i]
 		g.visible = s.visible
 		g.position = s.position + _glow_offset[i]
+		g.scale = Vector3.ONE * (s.pixel_size / _base_pixel[i])
 		var breath := 0.85 + 0.15 * sin(_time * 0.18 + float(i) * 2.3)
-		g.set_instance_shader_parameter("glow_strength", a * (glow_base + glow_shine * shine) * breath)
+		var dim := 1.0 - 0.6 * any_focus * (1.0 - f)
+		g.set_instance_shader_parameter("glow_strength", a * (glow_base + glow_shine * shine + 1.4 * f) * breath * dim)

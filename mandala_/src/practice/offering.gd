@@ -71,6 +71,14 @@ var _lotus_center := Vector3.ZERO
 var _fruit_trays: Node3D
 var _hand_item: Node3D        # предмет в руке (поднос с плодами, лампада, благовония, кувшин)
 var _hand_station := {}
+## Подношения по записи: цветы на кончиках лучей Ом (этап 1) и пригоршня красных цветов (этап 4)
+var _ray_flowers: Array[Node3D] = []
+var _ray_starts: Array[Vector3] = []
+var _red: Node3D
+var _red_flowers: Array[Node3D] = []
+var _red_home: Array[Transform3D] = []
+const RAY_FLOWER_COUNT := 28
+const RED_COUNT := 12
 
 func setup(camera: Camera3D, petal_table_position: Vector3, flower_stand_position: Vector3, target: Vector3) -> void:
 	_camera = camera
@@ -171,6 +179,91 @@ func setup_puja(positions: Dictionary, center: Vector3, lotus_center: Vector3) -
 		node.add_child(item)
 		st["item"] = item
 		st["home"] = item.transform
+
+## Подношения, которые идут прямо по записи, — всё считается из значений fx (то есть из времени записи):
+## fx.ray_flowers — цветы с кончиков лучей Ом летят к святым древа; fx.red_* — пригоршня красных цветов
+## в правой руке, обносится кругами по часовой стрелке и подбрасывается к древу
+func apply_rituals(fx) -> void:
+	var targets: Array[Vector3] = fx.tree.figure_positions() if fx.tree else [_target]
+	_apply_ray_flowers(fx.ray_flowers, fx.om_world_position(), targets)
+	_apply_red(fx.red_flowers, fx.red_circle, fx.red_toss, targets)
+
+func _apply_ray_flowers(progress: float, from: Vector3, targets: Array[Vector3]) -> void:
+	if progress < 0.0:
+		for f in _ray_flowers:
+			f.visible = false
+		return
+	if _ray_flowers.is_empty():
+		for i in RAY_FLOWER_COUNT:
+			var f := _random_flower(i) if i % 3 != 0 else _make_rose(PETAL_COLORS[i % 5])
+			f.visible = false
+			add_child(f)
+			_ray_flowers.append(f)
+			# каждый цветок выходит на своём луче: направление по сфере
+			var y := 1.0 - (float(i) + 0.5) / RAY_FLOWER_COUNT * 1.4
+			var r := sqrt(maxf(0.0, 1.0 - y * y))
+			var a := float(i) * PI * (3.0 - sqrt(5.0))
+			_ray_starts.append(Vector3(cos(a) * r, y, sin(a) * r - 0.4).normalized())
+	for i in _ray_flowers.size():
+		var f := _ray_flowers[i]
+		# сначала цветы появляются на кончиках лучей вокруг Ом, потом по очереди летят к святым
+		var appear := smoothstep(0.0, 0.25, progress)
+		var k := clampf((progress - 0.2 - 0.25 * float(i) / RAY_FLOWER_COUNT) / 0.55, 0.0, 1.0)
+		var tip := from + _ray_starts[i] * 0.9
+		var to: Vector3 = targets[i % targets.size()]
+		var e := k * k * (3.0 - 2.0 * k)
+		var pos := tip.lerp(to, e) + Vector3.UP * 0.8 * sin(PI * k)
+		var fade := 1.0 - smoothstep(0.8, 1.0, k)
+		f.visible = appear > 0.01 and k < 1.0
+		f.global_position = pos
+		f.rotation = Vector3(0.6 * sin(progress * 9.0 + i), progress * 4.0 + i, 0.4 * cos(progress * 7.0 + i))
+		f.scale = Vector3.ONE * SCALE * 0.55 * appear * (0.5 + 0.5 * fade)
+		_set_fade(f, fade)
+
+func _apply_red(show: float, turns: float, toss: float, targets: Array[Vector3]) -> void:
+	if _red == null:
+		if show <= 0.0:
+			return
+		_red = Node3D.new()
+		_hand.add_child(_red)
+		for i in RED_COUNT:
+			var f := _make_rose(PETAL_COLORS[i % 2])   # тёмно-красные и алые
+			var a := TAU * float(i) / RED_COUNT
+			var rr := 0.0 if i == 0 else (0.022 if i < 5 else 0.042)
+			f.position = Vector3(cos(a * 2.0) * rr, 0.01 + (0.012 if i < 5 else 0.0), sin(a * 2.0) * rr)
+			f.rotation = Vector3(_rng.randf_range(-0.4, 0.4), _rng.randf() * TAU, _rng.randf_range(-0.4, 0.4))
+			f.scale = Vector3.ONE * 0.22
+			_red.add_child(f)
+			_red_flowers.append(f)
+			_red_home.append(f.transform)
+	_red.visible = show > 0.002
+	if not _red.visible:
+		return
+	# пригоршня в ладони; круги по часовой стрелке для практикующего: снизу → влево → вверх → вправо
+	var a := TAU * turns
+	var r := 0.11
+	_red.position = Vector3(-0.08 - sin(a) * r, 0.05 + r - cos(a) * r, 0.0)
+	_red.rotation = Vector3(0.6, 0.0, 0.0)
+	_red.scale = Vector3.ONE * smoothstep(0.0, 1.0, show)
+	for i in _red_flowers.size():
+		var f := _red_flowers[i]
+		if toss <= 0.0:
+			f.top_level = false
+			f.transform = _red_home[i]
+			f.visible = true
+			_set_fade(f, 1.0)
+			continue
+		# подбросили: цветы разлетаются к святым древа и растворяются в свете
+		var k := clampf((toss - 0.06 * float(i) / RED_COUNT) / 0.94, 0.0, 1.0)
+		var e := k * k * (3.0 - 2.0 * k)
+		var from := _red.global_transform * _red_home[i].origin
+		var to: Vector3 = targets[(i * 3) % targets.size()]
+		var fade := 1.0 - smoothstep(0.8, 1.0, k)
+		f.top_level = true
+		f.visible = k < 1.0
+		f.global_position = from.lerp(to, e) + Vector3.UP * 1.2 * sin(PI * k)
+		f.scale = Vector3.ONE * lerpf(0.22 * 0.6, SCALE * 0.6, e) * (0.5 + 0.5 * fade)
+		_set_fade(f, fade)
 
 ## Столы и горы плодов видны только на этапе пуджи; предмет из руки возвращается на место
 func set_puja_visible(v: bool) -> void:

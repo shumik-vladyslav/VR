@@ -159,6 +159,8 @@ func _process(delta: float) -> void:
 		_next_stage()
 		return
 	_stage.apply(_t, _fx)
+	# подношения, которые идут прямо по записи (цветы на лучах Ом, пригоршня красных цветов)
+	_offering.apply_rituals(_fx)
 	# после подношения лепестков святые на время разгораются
 	_fx.tree_shine = maxf(_fx.tree_shine, 0.8 * _offering.glow)
 	# и сияние за объёмным Даттатрейей
