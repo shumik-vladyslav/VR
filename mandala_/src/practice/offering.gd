@@ -360,8 +360,7 @@ func _offer_petals() -> void:
 		var p := MeshInstance3D.new()
 		p.mesh = src.mesh
 		p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		for param in ["petal_color", "petal_seed", "base_color"]:
-			p.set_instance_shader_parameter(param, src.get_instance_shader_parameter(param))
+		p.material_override = (src.material_override as ShaderMaterial).duplicate()
 		get_parent().add_child(p)
 		p.global_transform = src.global_transform
 		var size: float = SCALE * 0.95 * src.scale.x / 0.6
@@ -538,7 +537,9 @@ func _process(delta: float) -> void:
 
 func _set_fade(n: Node, fade: float) -> void:
 	if n is MeshInstance3D and (n as MeshInstance3D).mesh is ArrayMesh:
-		(n as MeshInstance3D).set_instance_shader_parameter("petal_fade", fade)
+		var mat := (n as MeshInstance3D).material_override as ShaderMaterial
+		if mat:
+			mat.set_shader_parameter("petal_fade", fade)
 	for c in n.get_children():
 		_set_fade(c, fade)
 
@@ -608,10 +609,13 @@ func _petal(at: Vector3, scale_mul := 1.0) -> MeshInstance3D:
 	_paint(p, c.lerp(Color.WHITE, _rng.randf_range(0.0, 0.08)) * _rng.randf_range(0.92, 1.0), WARM_BASE)
 	return p
 
+## Свой материал у каждого лепестка (а не instance uniform) — так лепестки работают и в режиме OpenGL
 func _paint(p: MeshInstance3D, color: Color, base: Color) -> void:
-	p.set_instance_shader_parameter("petal_color", color)
-	p.set_instance_shader_parameter("base_color", base)
-	p.set_instance_shader_parameter("petal_seed", _rng.randf() * 100.0)
+	var mat := _petal_mat.duplicate() as ShaderMaterial
+	mat.set_shader_parameter("petal_color", color)
+	mat.set_shader_parameter("base_color", base)
+	mat.set_shader_parameter("petal_seed", _rng.randf() * 100.0)
+	p.material_override = mat
 
 ## Один лепесток цветка: основание в центре, наклон наружу на tilt (0 — вертикально, PI/2 — плашмя),
 ## вогнутой стороной к середине цветка

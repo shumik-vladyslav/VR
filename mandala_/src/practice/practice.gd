@@ -76,6 +76,9 @@ func _ready() -> void:
 	scene.set_process_input(false)
 	scene.set_physics_process(false)
 	_menu = scene.get_node_or_null("Menu")
+	# Отдельная сборка «Теургия 1» (feature teurgia1): других сцен в ней нет — переходы к ним из меню скрыты
+	if _menu and OS.has_feature("teurgia1"):
+		_hide_other_scenes.call_deferred()
 
 	var datta: Node3D = scene.get_node("Gods/Datta")
 	var origin: Node3D = datta.get_node("CameraOrigin")
@@ -86,6 +89,7 @@ func _ready() -> void:
 				child.visible = false
 				datta_parts.append(child)
 	_sharpen_chest_dram(datta)
+	_adapt_for_compatibility(scene)
 	origin.transform = Transform3D.IDENTITY
 	var cam: Camera3D = origin.get_node("MainCamera")
 	# Блики прожекторов в зеркальном полу мигают как битый пиксель; 3D-Датты во время практики нет — блики не нужны
@@ -333,6 +337,22 @@ func _sharpen_chest_dram(datta: Node) -> void:
 	m.emission_texture = m.albedo_texture
 	m.emission_energy_multiplier = 0.9
 	dram.material_override = m
+
+## Режим OpenGL (Compatibility) — для старых видеокарт без Vulkan и DirectX 12: свечение (glow) в нём
+## считается иначе и заливает всё белым, поэтому здесь оно сильно мягче
+func _adapt_for_compatibility(scene: Node) -> void:
+	if RenderingServer.get_rendering_device() != null:   # RenderingDevice есть только у Vulkan и DirectX 12
+		return
+	for we in scene.find_children("*", "WorldEnvironment", true, false):
+		var env := (we as WorldEnvironment).environment
+		if env:
+			env.glow_enabled = false
+
+func _hide_other_scenes() -> void:
+	for btn in ["%DattaBtn", "%MandalaBtn", "%Teurgia1Btn", "%MainMenuBtn"]:
+		var b := _menu.get_node_or_null(btn) as Control
+		if b:
+			b.visible = false
 
 func _stop_background_music() -> void:
 	var am := get_node_or_null("/root/AudioManager")

@@ -83,7 +83,7 @@ func build(camera_position: Vector3) -> void:
 		mat.shader = GLOW_SHADER
 		g.material_override = mat
 		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		g.set_instance_shader_parameter("figure_seed", fmod(float(_sprites.size()) * 0.618034, 1.0))
+		mat.set_shader_parameter("figure_seed", fmod(float(_sprites.size()) * 0.618034, 1.0))
 		add_child(g)
 		var back := (world - camera_position).normalized() * 0.04
 		g.global_position = world + back
@@ -140,4 +140,4 @@ func apply() -> void:
 		g.scale = Vector3.ONE * (s.pixel_size / _base_pixel[i])
 		var breath := 0.85 + 0.15 * sin(_time * 0.18 + float(i) * 2.3)
 		var dim := 1.0 - 0.6 * any_focus * (1.0 - f)
-		g.set_instance_shader_parameter("glow_strength", a * (glow_base + glow_shine * shine + 1.4 * f) * breath * dim)
+		(g.material_override as ShaderMaterial).set_shader_parameter("glow_strength", a * (glow_base + glow_shine * shine + 1.4 * f) * breath * dim)

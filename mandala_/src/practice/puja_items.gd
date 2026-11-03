@@ -223,7 +223,7 @@ static func _flame(at: Vector3, size: float, seed: int) -> MeshInstance3D:
 	var mat := ShaderMaterial.new()
 	mat.shader = FLAME_SHADER
 	var m := _mi(q, mat, at)
-	m.set_instance_shader_parameter("seed", fmod(float(seed) * 0.618, 1.0))
+	mat.set_shader_parameter("seed", fmod(float(seed) * 0.618, 1.0))
 	return m
 
 ## Пучок благовонных палочек в золотой чашечке; тлеющие кончики и дым (частицы остаются в мире — тянутся шлейфом)

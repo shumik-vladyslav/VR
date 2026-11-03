@@ -3,7 +3,7 @@ shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
 
 uniform float intensity : hint_range(0.0, 4.0) = 1.4;
-instance uniform float seed = 0.0;
+uniform float seed = 0.0;
 
 void vertex() {
 	// лицом к камере, но размер — от масштаба узла (лампа в руке маленькая, вокруг Даттатрейи — большая)

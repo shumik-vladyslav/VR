@@ -3,11 +3,11 @@
 shader_type spatial;
 render_mode cull_disabled, diffuse_burley, specular_schlick_ggx;
 
-instance uniform vec4 petal_color : source_color = vec4(1.0, 0.35, 0.5, 1.0);
-instance uniform float petal_fade = 1.0;
-instance uniform float petal_seed = 0.0;
+uniform vec4 petal_color : source_color = vec4(1.0, 0.35, 0.5, 1.0);
+uniform float petal_fade = 1.0;
+uniform float petal_seed = 0.0;
 // цвет основания лепестка (у лотоса — белый, у розы — тёплый светлый)
-instance uniform vec4 base_color : source_color = vec4(1.0, 0.93, 0.75, 1.0);
+uniform vec4 base_color : source_color = vec4(1.0, 0.93, 0.75, 1.0);
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {

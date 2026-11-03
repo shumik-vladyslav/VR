@@ -3,9 +3,9 @@
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
 
-instance uniform float glow_strength = 0.0;
+uniform float glow_strength = 0.0;
 // постоянное число фигуры 0..1 — свой узор лучей (из координат нельзя: фигуры «парят», и узор скакал бы каждый кадр)
-instance uniform float figure_seed = 0.0;
+uniform float figure_seed = 0.0;
 uniform vec4 color : source_color = vec4(1.0, 0.88, 0.62, 1.0);
 // где кончается фигура (доля радиуса квада) — лучи начинаются от её края
 uniform float figure_radius = 0.57;
