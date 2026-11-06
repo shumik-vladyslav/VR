@@ -111,7 +111,7 @@ const RAY_COLORS := [Color(1.0, 0.98, 0.92), Color(1.0, 0.16, 0.1), Color(0.1, 0
 const RAY_CORE_WHITE := [0.7, 0.45, 0.15]
 
 ## Где знак Ом относительно практикующего: у груди, чуть впереди и ниже глаз (м) — лучи идут как из тела
-var om_offset := Vector3(0.0, -0.3, -0.6)
+var om_offset := Vector3(0.0, -0.24, -0.42)
 
 var _om_pivot: Node3D
 var _om: MeshInstance3D
