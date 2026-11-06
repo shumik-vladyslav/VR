@@ -20,6 +20,9 @@ const RefugeTree := preload("res://src/practice/refuge_tree.gd")
 const Offering := preload("res://src/practice/offering.gd")
 const PracticeMenu := preload("res://src/practice/practice_menu.gd")
 const SEEK_STEP := 15.0
+const AUDIO_LAG_MAX := 2.0
+## Шина записи: при ускорении звука сдвиг высоты возвращает голос на его обычную высоту
+const SPEECH_BUS := "PracticeSpeech"
 ## Режим OpenGL: яркость «было → стало» (0…255), подобрана по кадрам полной версии; небо, насыщенность, ключевой свет
 const COMPAT_TONE: Array[Vector2] = [Vector2(0, 45), Vector2(40, 100), Vector2(106, 165), Vector2(141, 190), Vector2(184, 215), Vector2(255, 250)]
 const COMPAT_SKY_ENERGY := 0.9
@@ -65,6 +68,8 @@ var _stage_index := -1
 var _t := 0.0
 var _delay := 0.0
 var _paused := false
+var _speed := 1.0
+var _pitch_shift: AudioEffectPitchShift
 var _finished := false
 var _frames := 0
 ## Свет, в котором закончился прошлый этап, — плавно гаснет в начале следующего (переход идёт через свет)
@@ -143,6 +148,7 @@ func _ready() -> void:
 	}, puja_center, Vector3(mandala_center.x, -0.165, mandala_center.y))
 
 	_player = AudioStreamPlayer.new()
+	_player.bus = _speech_bus()
 	add_child(_player)
 	_setup_menu()
 
@@ -171,6 +177,7 @@ func _setup_menu() -> void:
 	_menu.stage_step_pressed.connect(func(direction: int) -> void:
 		_start_stage(clampi(_stage_index + direction, 0, STAGES.size() - 1), 0.0))
 	_menu.stage_picked.connect(_pick_stage)
+	_menu.speed_changed.connect(_set_speed)
 	_menu.volume_changed.connect(func(linear: float) -> void: _player.volume_db = linear_to_db(linear))
 	_menu.sensitivity_changed.connect(func(value: float) -> void: mouse_sensitivity = value)
 	_menu.subtitles_changed.connect(func(on: bool) -> void: show_text = on)
@@ -193,17 +200,18 @@ func _process(delta: float) -> void:
 		return
 
 	if not _paused:
-		var pos := _player.get_playback_position() + AudioServer.get_time_since_last_mix()
-		# по окончании записи плеер на кадр отдаёт позицию 0 — время практики назад само не идёт
-		if _player.playing and pos >= _t - 0.25:
+		var pos := _player.get_playback_position() + AudioServer.get_time_since_last_mix() * _speed
+		# образы идут за записью, даже если звук на миг отстал; но по окончании записи плеер на кадр отдаёт позицию 0 —
+		# на такой скачок назад время практики не идёт
+		if _player.playing and pos >= _t - AUDIO_LAG_MAX:
 			_t = pos
 		else:
-			_t += delta
+			_t += delta * _speed
 	if _t >= _stage.DURATION:
 		_next_stage()
 		return
 	_stage.apply(_t, _fx)
-	_stage_time += delta
+	_stage_time += delta * _speed
 	_fx.carry_white = _carry_white * (1.0 - smoothstep(0.0, CARRY_FADE, _stage_time))
 	# подношения, которые идут прямо по записи (цветы на лучах Ом, пригоршня красных цветов)
 	_offering.apply_rituals(_fx)
@@ -384,6 +392,25 @@ func _seek_to(target: float) -> void:
 	if _player.stream:
 		_player.play(_t)
 		_player.stream_paused = _paused
+
+## Скорость практики: запись играет быстрее, а высота голоса остаётся прежней; образы идут за временем записи
+func _set_speed(speed: float) -> void:
+	_speed = speed
+	_player.pitch_scale = speed
+	_pitch_shift.pitch_scale = 1.0 / speed
+	AudioServer.set_bus_effect_enabled(AudioServer.get_bus_index(SPEECH_BUS), 0, speed != 1.0)
+
+func _speech_bus() -> StringName:
+	var index := AudioServer.get_bus_index(SPEECH_BUS)
+	if index < 0:
+		AudioServer.add_bus()
+		index = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(index, SPEECH_BUS)
+		AudioServer.set_bus_send(index, "Master")
+		AudioServer.add_bus_effect(index, AudioEffectPitchShift.new(), 0)
+		AudioServer.set_bus_effect_enabled(index, 0, false)
+	_pitch_shift = AudioServer.get_bus_effect(index, 0) as AudioEffectPitchShift
+	return SPEECH_BUS
 
 func _set_paused(p: bool) -> void:
 	_paused = p

@@ -39,6 +39,11 @@ const MIRROR_TURN_DEG := 35.0
 const MIRROR_CAM_FROM := Vector3(0.0, 2.6, 4.9)
 const MIRROR_CAM_AT := Vector3(0.0, 2.05, 0.0)
 const MIRROR_FOV := 46.0
+## Сила сияния тела: сильнее — в зеркале за светом не видно самого тела
+const AURA_STRENGTH := 0.4
+const AURA_RAYS := 1.4
+const SKIN_GLOW := 0.4
+const BODY_LIGHT := 1.2
 ## На экране зеркало меньше 1000 точек по высоте: при 1100×1488 запас остаётся, а памяти и времени вдвое меньше, чем при 1500
 const MIRROR_WIDTH := 1100.0
 
@@ -125,6 +130,7 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 	_body_aura.mesh = q
 	var am := ShaderMaterial.new()
 	am.shader = AURA_SHADER
+	am.set_shader_parameter("rays", AURA_RAYS)
 	_body_aura.material_override = am
 	_body_aura.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_body_aura.layers = MIRROR_ONLY_LAYER
@@ -268,11 +274,11 @@ func commit(shown: bool) -> void:
 	# тело от первого лица
 	_body.visible = shown and merged
 	_body.global_transform = target
-	(_body_aura.material_override as ShaderMaterial).set_shader_parameter("intensity", 1.4 * body_glow)
+	(_body_aura.material_override as ShaderMaterial).set_shader_parameter("intensity", AURA_STRENGTH * body_glow)
 	_body_aura.visible = body_glow > 0.002
-	_radiance_mat.set_shader_parameter("radiance", radiance + 0.6 * body_light)
+	_radiance_mat.set_shader_parameter("radiance", SKIN_GLOW * (radiance + 0.6 * body_light))
 	_eyes_mat.set_shader_parameter("radiance", radiance + 2.5 * eyes_glow)
-	_light.light_energy = 2.5 * body_light
+	_light.light_energy = BODY_LIGHT * body_light
 	_light.visible = body_light > 0.002
 	_update_mirror()
 

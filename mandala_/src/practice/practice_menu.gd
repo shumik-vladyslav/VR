@@ -12,10 +12,12 @@ signal stage_picked(index: int)
 signal volume_changed(linear: float)
 signal sensitivity_changed(value: float)
 signal subtitles_changed(on: bool)
+signal speed_changed(speed: float)
 
 const CONFIG_PATH := "user://practice.cfg"
 const MAIN_MENU_SCENE := "res://src/app/App.tscn"
 const ESC_HINT_TIME := 12.0
+const SPEEDS := [1.0, 1.5, 2.0, 3.0]
 
 const GOLD := Color(0.96, 0.8, 0.42)
 const TEXT := Color(0.95, 0.93, 0.88)
@@ -54,6 +56,7 @@ var _sensitivity: HSlider
 var _detail: HSlider
 var _subtitles: CheckButton
 var _fullscreen: CheckButton
+var _speed := 1.0
 
 func setup(titles: Array[String], sensitivity: float, show_text: bool) -> void:
 	_titles = titles
@@ -97,6 +100,8 @@ func refresh(stage_index: int, t: float, duration: float, paused: bool, finished
 		b.disabled = not running
 	_timeline.editable = running
 	_state_label.text = ("На паузе" if paused else "Идёт") if running else ""
+	if running and _speed != 1.0:
+		_state_label.text += "  ·  " + _speed_text(_speed)
 	if running:
 		_stage_label.text = "Этап " + _titles[stage_index]
 		_timeline.max_value = duration
@@ -283,7 +288,7 @@ func _build_help() -> Control:
 	_subtitles = CheckButton.new()
 	_fullscreen = CheckButton.new()
 	_fullscreen.toggled.connect(_set_fullscreen)
-	for row in [["Громкость", _volume], ["Чувствительность мыши", _sensitivity], ["Чёткость картинки", _detail], ["Подписи на экране", _subtitles], ["Полный экран", _fullscreen]]:
+	for row in [["Скорость практики", _build_speed()], ["Громкость", _volume], ["Чувствительность мыши", _sensitivity], ["Чёткость картинки", _detail], ["Подписи на экране", _subtitles], ["Полный экран", _fullscreen]]:
 		settings.add_child(_label(row[0], 19, TEXT))
 		var control: Control = row[1]
 		control.focus_mode = Control.FOCUS_NONE
@@ -292,6 +297,27 @@ func _build_help() -> Control:
 		settings.add_child(control)
 	col.add_child(settings)
 	return col
+
+## Скорость не запоминается: каждый запуск начинается с обычной
+func _build_speed() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	var group := ButtonGroup.new()
+	for speed: float in SPEEDS:
+		var b := _button(_speed_text(speed), _set_speed.bind(speed))
+		b.toggle_mode = true
+		b.button_group = group
+		b.button_pressed = speed == _speed
+		b.custom_minimum_size.x = 68.0
+		row.add_child(b)
+	return row
+
+func _speed_text(speed: float) -> String:
+	return String.num(speed).replace(".", ",") + "×"
+
+func _set_speed(speed: float) -> void:
+	_speed = speed
+	speed_changed.emit(speed)
 
 ## Чёткость ниже — видеокарте легче: на слабых компьютерах это главный способ поднять плавность
 func _set_detail(scale: float) -> void:
@@ -356,6 +382,7 @@ func _make_theme() -> Theme:
 	th.set_stylebox("normal", "Button", _box(Color(1.0, 1.0, 1.0, 0.06), edge, 7.0))
 	th.set_stylebox("hover", "Button", _box(Color(GOLD.r, GOLD.g, GOLD.b, 0.2), GOLD, 7.0))
 	th.set_stylebox("pressed", "Button", _box(Color(GOLD.r, GOLD.g, GOLD.b, 0.35), GOLD, 7.0))
+	th.set_stylebox("hover_pressed", "Button", _box(Color(GOLD.r, GOLD.g, GOLD.b, 0.35), GOLD, 7.0))
 	th.set_stylebox("disabled", "Button", _box(Color(1.0, 1.0, 1.0, 0.02), Color(1.0, 1.0, 1.0, 0.08), 7.0))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
 		th.set_color(state, "Button", TEXT)
