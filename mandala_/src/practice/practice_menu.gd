@@ -13,6 +13,7 @@ signal volume_changed(linear: float)
 signal sensitivity_changed(value: float)
 signal subtitles_changed(on: bool)
 signal speed_changed(speed: float)
+signal om_gold_changed(gold: bool)
 
 const CONFIG_PATH := "user://practice.cfg"
 const MAIN_MENU_SCENE := "res://src/app/App.tscn"
@@ -57,6 +58,8 @@ var _detail: HSlider
 var _subtitles: CheckButton
 var _fullscreen: CheckButton
 var _speed := 1.0
+var _om_gold := false
+var _om_buttons: Array[Button] = []
 
 func setup(titles: Array[String], sensitivity: float, show_text: bool) -> void:
 	_titles = titles
@@ -75,6 +78,9 @@ func setup(titles: Array[String], sensitivity: float, show_text: bool) -> void:
 	sensitivity_changed.emit(_sensitivity.value)
 	_set_detail(_detail.value)
 	subtitles_changed.emit(_subtitles.button_pressed)
+	_om_gold = _config.get_value("practice", "om_gold", false)
+	_om_buttons[1 if _om_gold else 0].button_pressed = true
+	om_gold_changed.emit(_om_gold)
 
 func is_open() -> bool:
 	return _screen.visible
@@ -129,6 +135,7 @@ func _save() -> void:
 	_config.set_value("practice", "sensitivity", _sensitivity.value)
 	_config.set_value("practice", "detail", _detail.value)
 	_config.set_value("practice", "subtitles", _subtitles.button_pressed)
+	_config.set_value("practice", "om_gold", _om_gold)
 	_config.save(CONFIG_PATH)
 
 func _clock(t: float) -> String:
@@ -288,7 +295,7 @@ func _build_help() -> Control:
 	_subtitles = CheckButton.new()
 	_fullscreen = CheckButton.new()
 	_fullscreen.toggled.connect(_set_fullscreen)
-	for row in [["Скорость практики", _build_speed()], ["Громкость", _volume], ["Чувствительность мыши", _sensitivity], ["Чёткость картинки", _detail], ["Подписи на экране", _subtitles], ["Полный экран", _fullscreen]]:
+	for row in [["Скорость практики", _build_speed()], ["Знак Ом", _build_om_choice()], ["Громкость", _volume], ["Чувствительность мыши", _sensitivity], ["Чёткость картинки", _detail], ["Подписи на экране", _subtitles], ["Полный экран", _fullscreen]]:
 		settings.add_child(_label(row[0], 19, TEXT))
 		var control: Control = row[1]
 		control.focus_mode = Control.FOCUS_NONE
@@ -297,6 +304,23 @@ func _build_help() -> Control:
 		settings.add_child(control)
 	col.add_child(settings)
 	return col
+
+## Вид знака Ом запоминается
+func _build_om_choice() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	var group := ButtonGroup.new()
+	for gold: bool in [false, true]:
+		var b := _button("Золотой 3D" if gold else "Картинка", _set_om_gold.bind(gold))
+		b.toggle_mode = true
+		b.button_group = group
+		_om_buttons.append(b)
+		row.add_child(b)
+	return row
+
+func _set_om_gold(gold: bool) -> void:
+	_om_gold = gold
+	om_gold_changed.emit(gold)
 
 ## Скорость не запоминается: каждый запуск начинается с обычной
 func _build_speed() -> Control:

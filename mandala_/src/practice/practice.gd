@@ -105,6 +105,7 @@ func _ready() -> void:
 				datta_parts.append(child)
 	_sharpen_chest_dram(datta)
 	_adapt_for_compatibility(scene)
+	_set_window_icon()
 	origin.transform = Transform3D.IDENTITY
 	var cam: Camera3D = origin.get_node("MainCamera")
 	# Блики прожекторов в зеркальном полу мигают как битый пиксель; 3D-Датты во время практики нет — блики не нужны
@@ -178,6 +179,7 @@ func _setup_menu() -> void:
 		_start_stage(clampi(_stage_index + direction, 0, STAGES.size() - 1), 0.0))
 	_menu.stage_picked.connect(_pick_stage)
 	_menu.speed_changed.connect(_set_speed)
+	_menu.om_gold_changed.connect(func(gold: bool) -> void: _fx.om_gold = gold)
 	_menu.volume_changed.connect(func(linear: float) -> void: _player.volume_db = linear_to_db(linear))
 	_menu.sensitivity_changed.connect(func(value: float) -> void: mouse_sensitivity = value)
 	_menu.subtitles_changed.connect(func(on: bool) -> void: show_text = on)
@@ -449,6 +451,16 @@ func _adapt_for_compatibility(scene: Node) -> void:
 	if key:
 		key.light_energy *= COMPAT_KEY_LIGHT
 		key.shadow_enabled = false
+
+## Значок окна и панели задач в отдельной сборке «Теургия 1» (значок самого файла ставит set_exe_icon.ps1)
+func _set_window_icon() -> void:
+	if not OS.has_feature("teurgia1"):
+		return
+	var icon: Image = PracticeFx.OM_LOTUS.get_image()
+	if icon.is_compressed():
+		icon.decompress()
+	icon.convert(Image.FORMAT_RGBA8)
+	DisplayServer.set_icon(icon)
 
 func _compat_tone_curve() -> GradientTexture1D:
 	var curve := Gradient.new()

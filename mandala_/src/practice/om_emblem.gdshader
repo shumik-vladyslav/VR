@@ -12,6 +12,7 @@ uniform float rays_in : hint_range(0.0, 2.0) = 0.0;     // лучи к знак�
 uniform vec4 glyph_color : source_color = vec4(1.0, 0.85, 0.45, 1.0);
 uniform vec4 rays_tint : source_color = vec4(1.0, 1.0, 1.0, 0.0);   // цвет лучей наружу; альфа — доля вместо пяти цветов
 uniform bool billboard = false;     // всегда лицом к зрителю (большой Ом в центре)
+uniform float glyph_halo = 1.0;     // ореол по контуру картинки; у объёмного золотого Ома контур другой — выключен
 
 void vertex() {
 	if (billboard) {
@@ -58,7 +59,7 @@ void fragment() {
 
 	// Ореол вокруг знака, мягко переливающийся пятью цветами
 	float glow = glyph_glow(UV) * (1.0 - ga);
-	col += five(TIME * 0.05 + r * 0.6) * glow * 0.9 * halo;
+	col += five(TIME * 0.05 + r * 0.6) * glow * 0.9 * halo * glyph_halo;
 
 	// Кольца пятицветного сияния
 	float rings = exp(-pow((r - 0.22) / 0.14, 2.0));

@@ -88,6 +88,9 @@ $env:SCENE="res://teurgia1.tscn"; $env:OUT="<scratchpad>\shot.png"; $env:CAM="0,
 ### Облегчение моделей — `glb_slim.py`
 `& $B --background --factory-startup --python "$S\glb_slim.py" -- in.glb out.glb --decimate "lepestok.001=0.2,…" --max-image 2048` — упрощает названные меши (имена из JSON файла) и уменьшает текстуры, остальное в файле не меняется байт в байт: обычный экспорт из Blender пересобрал бы и тело, а `body_strip.gd` зависит от его вершин. Исходник бери из `models/gods/datta/…` (там те же файлы): `.glb` в git лежат в LFS, `git show` отдаёт только указатель. Детали с плоскими гранями и фаской портятся при сильном упрощении: трезубец при 0.25 пошёл бликами, при 0.5 — нормально. После встроенных картинок в новых `*.png.import` поставь `compress/mode=2`, иначе текстуры без сжатия.
 
+### Значок на собранный exe — `set_exe_icon.ps1`
+Godot без `rcedit` значок не меняет, поэтому после КАЖДОГО экспорта «Теургии 1»: `powershell -ExecutionPolicy Bypass -File "$Sset_exe_icon.ps1" buildTeurgia1Teurgia1.exe mandala_imagesom_icon.ico`. Значок окна ставит `practice.gd` (`_set_window_icon`).
+
 ### Очистка записи — `denoise_audio.py`
 `& $B --background --factory-startup --python "$S\denoise_audio.py" -- in.mp3 mandala_\audio\teurgia1\name.ogg` — шум ≈ −11 дБ, паузы находит сам. Таймкоды мантр находи по огибающей громкости: пропетые места громче (≈ −35 дБ) пояснений (≈ −47 дБ).
 

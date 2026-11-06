@@ -4,6 +4,8 @@
 // Узор строится по координатам модели: столы — тела вращения вокруг оси Y, столешница на радиусах 0.23…0.41 м.
 shader_type spatial;
 
+#include "res://src/practice/gold_surroundings.gdshaderinc"
+
 uniform vec3 gold : source_color = vec3(1.0, 0.77, 0.34);
 // 1 — столешница с чеканкой, 0 — гладкая поверхность с лёгкой ковкой
 uniform float chasing = 0.0;
@@ -62,14 +64,6 @@ float relief(float r, float angle) {
 	return min(h, 1.0);
 }
 
-// То, что отражает золото: тёплый купол и две мягкие полосы света (мировые координаты)
-vec3 surroundings(vec3 dir) {
-	float up = dir.y * 0.5 + 0.5;
-	vec3 c = mix(vec3(0.16, 0.08, 0.03), vec3(0.8, 0.58, 0.3), smoothstep(0.45, 0.98, up));
-	c += vec3(1.0, 0.92, 0.75) * 1.1 * pow(max(dot(dir, normalize(vec3(-0.35, 0.86, 0.36))), 0.0), 48.0);
-	c += vec3(1.0, 0.8, 0.55) * 0.4 * pow(max(dot(dir, normalize(vec3(0.62, 0.5, -0.6))), 0.0), 10.0);
-	return c;
-}
 
 void fragment() {
 	float r = length(model_pos.xz);

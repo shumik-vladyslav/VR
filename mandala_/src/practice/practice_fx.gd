@@ -15,6 +15,12 @@ const SceneExtras := preload("res://src/practice/scene_extras.gd")
 const OM_LOTUS := preload("res://images/om_big.png")
 const OM_CHEST_SIZE := 0.26     # знак у груди практикующего (м)
 const OM_CENTER_SIZE := 3.8     # большой Ом в центре (этап 21 Ом)
+## Объёмный золотой Ом вместо картинки (выбор в меню): модель шириной 1 м, лицом в +Z
+const OM_GOLD_SCENE := preload("res://models/gods/teurgia1/om/om_gold.glb")
+const OM_GOLD_SHADER := preload("res://src/practice/om_gold.gdshader")
+const OM_GOLD_CENTER_SIZE := 3.2
+const OM_GOLD_FORWARD := 0.3    # впереди сияния, чтобы толщина не уходила в него
+const OM_GOLD_SWAY := 0.22      # покачивается, чтобы был виден объём (радианы)
 
 const BEAM_COUNT := 44          # лучей во все стороны
 const BEAMS_TO_PLAYER := 5      # лучей к практикующему
@@ -82,6 +88,8 @@ var ring_phase := -1.0
 var ring_strength := 0.0
 var ring_color := Color(1.0, 0.88, 0.62)
 var rays_tint := Color(1.0, 1.0, 1.0, 0.0)
+## Ом — золотой объёмный, а не картинка
+var om_gold := false
 
 ## Древо Прибежища (refuge_tree.gd), если есть
 var tree: Node3D
@@ -128,6 +136,8 @@ var _transformation
 var _extras
 var _om_image: MeshInstance3D
 var _center_om_image: MeshInstance3D
+var _om_gold_chest: MeshInstance3D
+var _center_om_gold: MeshInstance3D
 ## Свет, оставшийся от прошлого этапа (переход между этапами идёт через свет, а не обрывается)
 var carry_white := 0.0
 
@@ -145,6 +155,10 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_om_image = _om_picture(OM_CHEST_SIZE, false)
 	_om_image.position = om_offset + Vector3(0, 0, 0.01)
 	_om_pivot.add_child(_om_image)
+	_om_gold_chest = _gold_om(OM_CHEST_SIZE)
+	_om_gold_chest.position = om_offset + Vector3(0, 0, 0.03)
+	_om_gold_chest.layers = Transformation.OVERLAY_LAYER
+	_om_pivot.add_child(_om_gold_chest)
 	follow(camera.global_position, camera.global_rotation.y)
 
 	# Сияние за Даттой
@@ -169,6 +183,9 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_center_om_image = _om_picture(OM_CENTER_SIZE, true)
 	_center_om_image.position = _center_om.position + Vector3(0, 0, 0.05)
 	add_child(_center_om_image)
+	_center_om_gold = _gold_om(OM_GOLD_CENTER_SIZE)
+	_center_om_gold.position = _center_om.position + Vector3(0, 0, OM_GOLD_FORWARD)
+	add_child(_center_om_gold)
 
 	# Объёмные лучи из самого центра большого Ома — во все стороны и к практикующему
 	_beams = Node3D.new()
@@ -300,19 +317,22 @@ func commit() -> void:
 	_commit_rays()
 	var om := _om.material_override as ShaderMaterial
 	om.set_shader_parameter("intensity", 0.0)
+	om.set_shader_parameter("glyph_halo", 0.0 if om_gold else 1.0)
 	om.set_shader_parameter("halo", om_halo)
 	om.set_shader_parameter("rays_out", rays_out)
 	om.set_shader_parameter("rays_in", rays_in)
 	om.set_shader_parameter("rays_tint", rays_tint)
 	_om.visible = om_intensity + om_halo + rays_out + rays_in > 0.002
-	_set_picture(_om_image, om_intensity * 1.6, 1.0 + 0.5 * om_halo)
+	_set_om(_om_image, _om_gold_chest, om_intensity * 1.6, 1.0 + 0.5 * om_halo)
 
 	var cm := _center_om.material_override as ShaderMaterial
 	cm.set_shader_parameter("intensity", 0.0)
+	cm.set_shader_parameter("glyph_halo", 0.0 if om_gold else 1.0)
 	cm.set_shader_parameter("halo", center_halo)
 	cm.set_shader_parameter("rays_out", center_rays)
 	_center_om.visible = center_om + center_halo + center_rays > 0.002
-	_set_picture(_center_om_image, center_om * 1.8, 1.0 + 0.6 * center_halo)
+	_set_om(_center_om_image, _center_om_gold, center_om * 1.8, 1.0 + 0.6 * center_halo)
+	_sway_gold_om()
 
 	# Лучи к практикующему смотрят на его текущее место (на грудь) и заканчиваются у него
 	var to_player := _camera.global_position + Vector3(0, -0.4, 0) - _beams.global_position
@@ -489,6 +509,36 @@ func _set_picture(m: MeshInstance3D, alpha: float, brightness: float) -> void:
 	var a := clampf(alpha, 0.0, 1.0)
 	m.visible = a > 0.002
 	(m.material_override as StandardMaterial3D).albedo_color = Color(brightness, brightness, brightness, a)
+
+## Показать Ом выбранного вида: картинку или объёмный золотой
+func _set_om(picture: MeshInstance3D, gold: MeshInstance3D, alpha: float, brightness: float) -> void:
+	_set_picture(picture, 0.0 if om_gold else alpha, brightness)
+	var a := clampf(alpha, 0.0, 1.0)
+	gold.visible = om_gold and a > 0.002
+	if gold.visible:
+		var m := gold.material_override as ShaderMaterial
+		m.set_shader_parameter("alpha", a)
+		m.set_shader_parameter("glow", brightness)
+
+## Большой Ом смотрит на практикующего, оба покачиваются — так виден объём
+func _sway_gold_om() -> void:
+	var sway := OM_GOLD_SWAY * sin(Time.get_ticks_msec() * 0.0006)
+	_om_gold_chest.rotation.y = sway
+	var to_camera := _camera.global_position - _center_om_gold.global_position
+	_center_om_gold.rotation.y = atan2(to_camera.x, to_camera.z) + sway
+
+func _gold_om(size: float) -> MeshInstance3D:
+	var model := OM_GOLD_SCENE.instantiate()
+	var m := MeshInstance3D.new()
+	m.mesh = (model.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D).mesh
+	model.free()
+	var mat := ShaderMaterial.new()
+	mat.shader = OM_GOLD_SHADER
+	m.material_override = mat
+	m.scale = Vector3.ONE * size
+	m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	m.visible = false
+	return m
 
 func _quad(shader: Shader, size: Vector2) -> MeshInstance3D:
 	var m := MeshInstance3D.new()
