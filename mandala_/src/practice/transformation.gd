@@ -39,6 +39,8 @@ const MIRROR_TURN_DEG := 35.0
 const MIRROR_CAM_FROM := Vector3(0.0, 2.6, 4.9)
 const MIRROR_CAM_AT := Vector3(0.0, 2.05, 0.0)
 const MIRROR_FOV := 46.0
+## На экране зеркало меньше 1000 точек по высоте: при 1100×1488 запас остаётся, а памяти и времени вдвое меньше, чем при 1500
+const MIRROR_WIDTH := 1100.0
 
 ## 0..1 — преображение практикующего; 1 — преобразился, дальше тело от первого лица
 var merge := 0.0
@@ -59,6 +61,7 @@ var _body_aura: MeshInstance3D
 var _viewport: SubViewport
 var _mirror_cam: Camera3D
 var _mirror: MeshInstance3D
+var _mirror_frame := false
 var _body_local: Transform3D
 var _radiance_mat: ShaderMaterial
 var _eyes_mat: ShaderMaterial
@@ -131,7 +134,7 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 	# зеркало: отражение рисует камера за плоскостью зеркала в отдельный SubViewport
 	_viewport = SubViewport.new()
 	# зеркало крупное и близко — отражению нужно высокое разрешение и сглаживание, иначе руки и плечи «лесенкой»
-	_viewport.size = Vector2i(1500, int(1500.0 * MIRROR_SIZE.y / MIRROR_SIZE.x))
+	_viewport.size = Vector2i(MIRROR_WIDTH, int(MIRROR_WIDTH * MIRROR_SIZE.y / MIRROR_SIZE.x))
 	_viewport.msaa_3d = Viewport.MSAA_4X
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(_viewport)
@@ -140,6 +143,14 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 	_mirror_cam.fov = MIRROR_FOV
 	_mirror_cam.keep_aspect = Camera3D.KEEP_HEIGHT
 	_mirror_cam.cull_mask = 1 | MIRROR_ONLY_LAYER
+	# экранные эффекты в отражении не видны, а стоили половины кадра и 600 МБ видеопамяти
+	var world_env := _camera.get_world_3d().environment
+	if world_env:
+		var env := world_env.duplicate() as Environment
+		env.ssao_enabled = false
+		env.ssil_enabled = false
+		env.ssr_enabled = false
+		_mirror_cam.environment = env
 	_viewport.add_child(_mirror_cam)
 	_mirror = MeshInstance3D.new()
 	var mq := QuadMesh.new()
@@ -267,9 +278,13 @@ func commit(shown: bool) -> void:
 func _update_mirror() -> void:
 	var m := smoothstep(0.0, 1.0, mirror)
 	_mirror.visible = m > 0.002
-	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if _mirror.visible else SubViewport.UPDATE_DISABLED
 	if not _mirror.visible:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		return
+	# портрет в зеркале почти неподвижен — хватает отрисовки через кадр
+	_mirror_frame = not _mirror_frame
+	if _mirror_frame:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	(_mirror.material_override as ShaderMaterial).set_shader_parameter("alpha", m)
 	# «Зеркало света» показывает практикующего всегда спереди, как портрет (картинка отражена, как в зеркале):
 	# настоящее отражение показывало тело сбоку, а сбоку и сзади у двурукой формы пусто — спина модели общая

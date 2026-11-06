@@ -40,6 +40,7 @@ var _glows: Array[MeshInstance3D] = []
 var _glow_offset: Array[Vector3] = []
 var _row_count := 1
 var _time := 0.0
+var _was_shown := true
 
 func build(camera_position: Vector3) -> void:
 	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PARTS_JSON))
@@ -107,7 +108,11 @@ func figure_positions() -> Array[Vector3]:
 
 func _process(delta: float) -> void:
 	_time += delta
-	apply()
+	# пока древа нет, 100 с лишним узлов каждый кадр не трогаем (один проход — чтобы скрыть их)
+	var shown := reveal > 0.0
+	if shown or _was_shown:
+		apply()
+	_was_shown = shown
 
 func apply() -> void:
 	# пока о каком-то ряде говорят, остальные чуть приглушены — так видно, о ком речь
@@ -122,6 +127,9 @@ func apply() -> void:
 		if not growing:
 			a *= others
 		s.visible = a > 0.002
+		if not s.visible:
+			_glows[i].visible = false
+			continue
 		var f: float = focus.get(_rows[i], 0.0)
 		var glow := 1.0 + 0.3 * shine * (0.75 + 0.25 * sin(_time * 1.3 + float(_rows[i]) * 0.7)) + 0.35 * f
 		glow *= 1.0 - 0.4 * any_focus * (1.0 - f)

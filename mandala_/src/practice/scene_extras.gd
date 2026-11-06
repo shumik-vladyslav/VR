@@ -6,7 +6,7 @@ extends Node3D
 const SUN_SHADER := preload("res://src/practice/sun_disc.gdshader")
 const WAVE_SHADER := preload("res://src/practice/blessing_wave.gdshader")
 const AURA_SHADER := preload("res://src/practice/aura.gdshader")
-const SHIVA_SCENE := "res://models/gods/round1/ishana/Ishana.tscn"
+const SHIVA_SCENE := "res://models/gods/teurgia1/shiva/Shiva.tscn"
 
 ## Солнце справа над древом (над вершиной его закрывала бы плашка с текстом); в его диске — Сурья
 ## (литография Ravi Varma Press «Сурья-Нараяна», общественное достояние, Wikimedia Commons)
@@ -33,6 +33,7 @@ const SPARKLE_EXTENTS := Vector3(7.0, 2.6, 7.0)
 var _sun: MeshInstance3D
 var _surya: Sprite3D
 var _shiva: Node3D
+var _look_from: Vector3
 var _shiva_flash: MeshInstance3D
 var _shiva_light: OmniLight3D
 var _wave: MeshInstance3D
@@ -55,15 +56,9 @@ func setup(look_from: Vector3) -> void:
 	_surya.position = SUN_POSITION + (look_from - SUN_POSITION).normalized() * 0.05
 	add_child(_surya)
 
-	_shiva = (load(SHIVA_SCENE) as PackedScene).instantiate()
-	var s := SHIVA_HEIGHT / SHIVA_MODEL_HEIGHT
-	var yaw := atan2(look_from.x - SHIVA_POSITION.x, look_from.z - SHIVA_POSITION.z)
-	_shiva.transform = Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s),
-		SHIVA_POSITION - Vector3(0.0, SHIVA_MODEL_BOTTOM * s, 0.0))
-	_shiva.visible = false
-	add_child(_shiva)
-	for g in _shiva.find_children("*", "GeometryInstance3D", true, false):
-		(g as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Шива нужен только на этапе 2: модель грузится в фоне, запуск её не ждёт
+	_look_from = look_from
+	ResourceLoader.load_threaded_request(SHIVA_SCENE)
 	# вспышка, в которой Шива появляется и уходит, и мягкий свет на нём
 	_shiva_flash = _quad(AURA_SHADER, 5.0)
 	_shiva_flash.material_override.set_shader_parameter("color", Color(0.85, 0.92, 1.0))
@@ -110,6 +105,18 @@ func setup(look_from: Vector3) -> void:
 	_add_sparkles()
 	commit(0.0, 0.0, 0.0, -1.0, 0.0)
 	commit_vision(0.0, Vector3.ZERO, -1.0, 0.0, Color.WHITE)
+
+## Если модель ещё не догрузилась (сразу перешли к этапу 2), load_threaded_get её дождётся
+func _add_shiva() -> void:
+	_shiva = (ResourceLoader.load_threaded_get(SHIVA_SCENE) as PackedScene).instantiate()
+	var s := SHIVA_HEIGHT / SHIVA_MODEL_HEIGHT
+	var yaw := atan2(_look_from.x - SHIVA_POSITION.x, _look_from.z - SHIVA_POSITION.z)
+	_shiva.transform = Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s),
+		SHIVA_POSITION - Vector3(0.0, SHIVA_MODEL_BOTTOM * s, 0.0))
+	_shiva.visible = false
+	add_child(_shiva)
+	for g in _shiva.find_children("*", "GeometryInstance3D", true, false):
+		(g as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 ## Искры света во всём пространстве: медленно всплывают, загораются и гаснут
 func _add_sparkles() -> void:
@@ -187,8 +194,11 @@ func commit(sun: float, shiva: float, shiva_flash: float, wave_phase: float, wav
 	_surya.modulate = Color(1.15, 1.1, 1.0, smoothstep(0.0, 1.0, sun))
 	_surya.visible = _sun.visible
 
-	_shiva.visible = shiva > 0.5
-	_shiva_light.visible = _shiva.visible
+	if _shiva == null and (shiva > 0.5 or ResourceLoader.load_threaded_get_status(SHIVA_SCENE) == ResourceLoader.THREAD_LOAD_LOADED):
+		_add_shiva()
+	if _shiva:
+		_shiva.visible = shiva > 0.5
+	_shiva_light.visible = shiva > 0.5
 	_shiva_light.light_energy = 1.2
 	(_shiva_flash.material_override as ShaderMaterial).set_shader_parameter("intensity", 5.0 * shiva_flash)
 	_shiva_flash.visible = shiva_flash > 0.002

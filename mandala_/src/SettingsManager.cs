@@ -79,8 +79,12 @@ public partial class SettingsManager : Node
         
         if (!fullscreen)
         {
-            Vector2I screenSize = DisplayServer.ScreenGetSize(DisplayServer.WindowGetCurrentScreen());
-            DisplayServer.WindowSetSize(screenSize);
+            // Окно размером с экран не помещается: заголовок и кнопки уезжают за край
+            int screen = DisplayServer.WindowGetCurrentScreen();
+            Vector2I screenSize = DisplayServer.ScreenGetSize(screen);
+            Vector2I windowSize = screenSize * 3 / 4;
+            DisplayServer.WindowSetSize(windowSize);
+            DisplayServer.WindowSetPosition(DisplayServer.ScreenGetPosition(screen) + (screenSize - windowSize) / 2);
         }
         IsFullScreen = fullscreen;
     }

@@ -8,6 +8,7 @@ extends Node3D
 ## В VR то же самое будет через контроллер: взять со стола, бросить.
 
 const PETAL_SHADER := preload("res://src/practice/petal.gdshader")
+const TABLE_GOLD_SHADER := preload("res://src/practice/table_gold.gdshader")
 const AURA_SHADER := preload("res://src/practice/aura.gdshader")
 const PujaItems := preload("res://src/practice/puja_items.gd")
 
@@ -45,9 +46,12 @@ var _camera: Camera3D
 var _target := Vector3.ZERO
 var _petal_mat: ShaderMaterial
 var _gold: StandardMaterial3D
-var _plate_gold: StandardMaterial3D
 var _vessel_gold: StandardMaterial3D
-var _foot_gold: StandardMaterial3D
+## Золото столов: столешница с чеканкой, блюдо, подножие и колонна (table_gold.gdshader)
+var _top_gold: ShaderMaterial
+var _plate_gold: ShaderMaterial
+var _foot_gold: ShaderMaterial
+var _bead_gold: ShaderMaterial
 ## Сетки лепестков: розовые (с выемкой), заострённые (лотос), узкие кружевные (бархатец), чашелистики
 var _rose_petals: Array[ArrayMesh] = []
 var _lotus_petal: ArrayMesh
@@ -124,15 +128,7 @@ func setup(camera: Camera3D, petal_table_position: Vector3, flower_stand_positio
 		Vector2(0.05, 0.006), Vector2(0.074, 0.02), Vector2(0.086, 0.034), Vector2(0.09, 0.04),          # чаша снаружи
 		Vector2(0.087, 0.043), Vector2(0.078, 0.034), Vector2(0.055, 0.018), Vector2(0.0, 0.012),         # и внутри
 	], _vessel_gold, 48)
-	var rim_bead := SphereMesh.new()
-	rim_bead.radius = 0.0035
-	rim_bead.height = 0.007
-	rim_bead.material = _vessel_gold
-	for i in 28:
-		var b := MeshInstance3D.new()
-		b.mesh = rim_bead
-		b.position = Vector3(cos(TAU * i / 28.0) * 0.089, 0.042, sin(TAU * i / 28.0) * 0.089)
-		_vessel.add_child(b)
+	_bead_ring(_vessel, 0.0035, _vessel_gold, 28, 0.089, 0.042)
 	# горка лепестков в сосуде — показывается, когда взяли лепестки
 	_vessel_petals = Node3D.new()
 	_vessel_petals.visible = false
@@ -569,12 +565,12 @@ func _make_materials() -> void:
 	_gold.roughness = 0.36
 	_gold.emission_enabled = true
 	_gold.emission = Color(0.35, 0.22, 0.05)
-	_plate_gold = StandardMaterial3D.new()
-	_plate_gold.albedo_color = Color(1.0, 0.84, 0.5)
-	_plate_gold.metallic = 0.9
-	_plate_gold.roughness = 0.22
-	_plate_gold.emission_enabled = true
-	_plate_gold.emission = Color(0.4, 0.28, 0.08)
+	_top_gold = _table_gold(Color(1.0, 0.77, 0.34), 1.0, 1.0)
+	_plate_gold = _table_gold(Color(1.0, 0.84, 0.5), 0.0, 1.1)
+	# подножие темнее: оно в тени столешницы
+	_foot_gold = _table_gold(Color(0.85, 0.62, 0.28), 0.0, 0.7)
+	_bead_gold = _table_gold(Color(1.0, 0.84, 0.5), 0.0, 1.1)
+	_bead_gold.set_shader_parameter("turned", 0.0)
 	# сосуд в руке у самых глаз: зеркальное золото отражает небо и «плывёт» цветом — делаем матовым, без отражений
 	_vessel_gold = StandardMaterial3D.new()
 	_vessel_gold.albedo_color = Color(0.95, 0.72, 0.32)
@@ -586,18 +582,20 @@ func _make_materials() -> void:
 	_vessel_gold.rim_enabled = true
 	_vessel_gold.rim = 0.4
 	_vessel_gold.rim_tint = 0.8
-	# подножие столов: золото без зеркального отражения пола
-	_foot_gold = StandardMaterial3D.new()
-	_foot_gold.albedo_color = Color(0.85, 0.62, 0.28)
-	_foot_gold.metallic = 0.5
-	_foot_gold.roughness = 0.6
-	_foot_gold.metallic_specular = 0.2
 	for i in 6:
 		_rose_petals.append(_make_petal_mesh(_rng.randf_range(0.075, 0.095), _rng.randf_range(0.07, 0.088),
 			_rng.randf_range(0.4, 0.75), _rng.randf_range(0.1, 0.3), _rng.randf_range(0.1, 0.5), 0))
 	_lotus_petal = _make_petal_mesh(0.07, 0.034, 0.9, 0.25, 0.0, 1)
 	_marigold_petal = _make_petal_mesh(0.026, 0.02, 0.5, 0.2, 0.3, 2)
 	_sepal = _make_petal_mesh(0.04, 0.014, 0.6, 0.3, 0.6, 1)
+
+func _table_gold(color: Color, chasing: float, shine: float) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = TABLE_GOLD_SHADER
+	m.set_shader_parameter("gold", color)
+	m.set_shader_parameter("chasing", chasing)
+	m.set_shader_parameter("shine", shine)
+	return m
 
 func _petal(at: Vector3, scale_mul := 1.0) -> MeshInstance3D:
 	var p := MeshInstance3D.new()
@@ -767,19 +765,30 @@ func _build_table(parent: Node3D) -> void:
 		Vector2(0.0, 0.806), Vector2(0.15, 0.806), Vector2(0.19, 0.82), Vector2(0.215, 0.845),
 		Vector2(0.225, 0.855), Vector2(0.215, 0.858), Vector2(0.20, 0.848), Vector2(0.17, 0.83), Vector2(0.0, 0.828),
 	]
-	_lathe(parent, table, _gold, 64)
+	_lathe(parent, table, _top_gold, 64)
 	_lathe(parent, plate, _plate_gold, 64)
 	# бусины по краю столешницы
+	_bead_ring(parent, 0.014, _bead_gold, 36, 0.445, 0.765)
+
+## Кольцо бусин одним объектом. Сфера по умолчанию — 4000 треугольников: на всех столах это был миллион на кадр
+func _bead_ring(parent: Node3D, bead_radius: float, mat: Material, count: int, ring_radius: float, height: float) -> void:
 	var bead := SphereMesh.new()
-	bead.radius = 0.014
-	bead.height = 0.028
-	bead.material = _gold
-	for i in 36:
-		var a := TAU * float(i) / 36.0
-		var b := MeshInstance3D.new()
-		b.mesh = bead
-		b.position = Vector3(cos(a) * 0.445, 0.765, sin(a) * 0.445)
-		parent.add_child(b)
+	bead.radius = bead_radius
+	bead.height = bead_radius * 2.0
+	bead.radial_segments = 12
+	bead.rings = 6
+	bead.material = mat
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = bead
+	mm.instance_count = count
+	for i in count:
+		var a := TAU * float(i) / float(count)
+		mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(cos(a) * ring_radius, height, sin(a) * ring_radius)))
+	var ring := MultiMeshInstance3D.new()
+	ring.multimesh = mm
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(ring)
 
 func _lathe(parent: Node3D, profile: Array, mat: Material, segments: int) -> void:
 	var st := SurfaceTool.new()

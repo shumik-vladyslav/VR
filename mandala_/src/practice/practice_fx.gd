@@ -109,7 +109,7 @@ var _om_pivot: Node3D
 var _om: MeshInstance3D
 var _center_om: MeshInstance3D
 var _beams: Node3D
-var _beam_mats: Array[ShaderMaterial] = []
+var _beam_mat: ShaderMaterial
 var _player_beams: Array[MeshInstance3D] = []
 var _player_beam_len := 1.0
 var _center_light: OmniLight3D
@@ -174,6 +174,8 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_beams = Node3D.new()
 	_beams.position = _center_om.position
 	add_child(_beams)
+	_beam_mat = ShaderMaterial.new()
+	_beam_mat.shader = BEAM_SHADER
 	var golden := PI * (3.0 - sqrt(5.0))
 	for i in BEAM_COUNT:
 		var y := 1.0 - (float(i) + 0.5) / float(BEAM_COUNT) * 2.0     # равномерно по сфере
@@ -319,9 +321,8 @@ func commit() -> void:
 	for i in _player_beams.size():
 		_orient_beam(_player_beams[i], (to_player + spread[i % spread.size()]).normalized(), _player_beam_len)
 	_beams.visible = center_beams > 0.002
-	for m in _beam_mats:
-		m.set_shader_parameter("intensity", center_beams)
-		m.set_shader_parameter("pulse", center_pulse)
+	_beam_mat.set_shader_parameter("intensity", center_beams)
+	_beam_mat.set_shader_parameter("pulse", center_pulse)
 	_center_light.light_energy = center_om * 0.25 + center_beams * 3.0
 	_center_light.visible = center_om + center_beams > 0.002
 	# Волна света дошла до практикующего — мягкая тёплая вспышка во взгляде
@@ -431,7 +432,9 @@ func _update_panel() -> void:
 		return
 	var pad := Vector2(0.09, 0.06)
 	var size := Vector2(box.size.x, box.size.y) + pad * 2.0
-	(_panel.mesh as QuadMesh).size = size
+	var quad := _panel.mesh as QuadMesh
+	if quad.size != size:   # присваивание пересобирает меш — только когда текст сменился
+		quad.size = size
 	_panel.position = Vector3(box.get_center().x, box.get_center().y, -2.42)
 	var pm := _panel.material_override as ShaderMaterial
 	pm.set_shader_parameter("size", size)
@@ -449,11 +452,8 @@ func _add_beam(dir: Vector3, length: float, radius: float) -> MeshInstance3D:
 	c.cap_top = false
 	c.cap_bottom = false
 	m.mesh = c
-	var mat := ShaderMaterial.new()
-	mat.shader = BEAM_SHADER
-	m.material_override = mat
+	m.material_override = _beam_mat
 	m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_beam_mats.append(mat)
 	_beams.add_child(m)
 	_orient_beam(m, dir, length)
 	return m
