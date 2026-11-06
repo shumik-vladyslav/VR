@@ -20,6 +20,11 @@ const RefugeTree := preload("res://src/practice/refuge_tree.gd")
 const Offering := preload("res://src/practice/offering.gd")
 const PracticeMenu := preload("res://src/practice/practice_menu.gd")
 const SEEK_STEP := 15.0
+## Режим OpenGL: яркость «было → стало» (0…255), подобрана по кадрам полной версии; небо, насыщенность, ключевой свет
+const COMPAT_TONE: Array[Vector2] = [Vector2(0, 45), Vector2(40, 100), Vector2(106, 165), Vector2(141, 190), Vector2(184, 215), Vector2(255, 250)]
+const COMPAT_SKY_ENERGY := 0.9
+const COMPAT_SATURATION := 1.1
+const COMPAT_KEY_LIGHT := 0.1
 
 @export var autostart := true
 @export var start_delay := 2.0
@@ -398,8 +403,10 @@ func _sharpen_chest_dram(datta: Node) -> void:
 	m.emission_energy_multiplier = 0.9
 	dram.material_override = m
 
-## Режим OpenGL (Compatibility) — для старых видеокарт без Vulkan и DirectX 12: свечение (glow) в нём
-## считается иначе и заливает всё белым, поэтому здесь оно сильно мягче
+## Режим OpenGL (Compatibility) — для старых видеокарт без Vulkan и DirectX 12: свечение (glow) в нём считается иначе
+## и заливает всё белым, поэтому оно выключено. Но в полной версии именно оно подсвечивает весь кадр: без него картинка
+## втрое темнее и небо чёрное. Эту подсветку заменяет кривая яркости: тени поднимает, светлое не выбивает.
+## Ключевой свет в OpenGL белит кожу, поэтому он слабее и без тени — заодно на проход отрисовки меньше
 func _adapt_for_compatibility(scene: Node) -> void:
 	if RenderingServer.get_rendering_device() != null:   # RenderingDevice есть только у Vulkan и DirectX 12
 		return
@@ -407,6 +414,28 @@ func _adapt_for_compatibility(scene: Node) -> void:
 		var env := (we as WorldEnvironment).environment
 		if env:
 			env.glow_enabled = false
+			env.background_energy_multiplier = COMPAT_SKY_ENERGY
+			env.adjustment_enabled = true
+			env.adjustment_saturation = COMPAT_SATURATION
+			env.adjustment_color_correction = _compat_tone_curve()
+	var key := scene.get_node_or_null("Environment/KeyLight") as Light3D
+	if key:
+		key.light_energy *= COMPAT_KEY_LIGHT
+		key.shadow_enabled = false
+
+func _compat_tone_curve() -> GradientTexture1D:
+	var curve := Gradient.new()
+	var offsets := PackedFloat32Array()
+	var colors := PackedColorArray()
+	for point in COMPAT_TONE:
+		offsets.append(point.x / 255.0)
+		colors.append(Color(point.y / 255.0, point.y / 255.0, point.y / 255.0))
+	curve.offsets = offsets
+	curve.colors = colors
+	var texture := GradientTexture1D.new()
+	texture.gradient = curve
+	texture.width = 256
+	return texture
 
 func _stop_background_music() -> void:
 	var am := get_node_or_null("/root/AudioManager")

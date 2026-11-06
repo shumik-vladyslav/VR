@@ -6,6 +6,8 @@ extends Node3D
 
 const PARTS_DIR := "res://images/refuge_tree/parts/"
 const PARTS_JSON := "res://images/refuge_tree/parts.json"
+## Разметка вырезания: где центр и радиус круга каждого медальона
+const LAYOUT_JSON := "res://images/refuge_tree/layout.json"
 const GLOW_SHADER := preload("res://src/practice/figure_glow.gdshader")
 
 ## Свечение за фигурами: всегда чуть-чуть, с shine — сильнее
@@ -44,6 +46,9 @@ var _was_shown := true
 
 func build(camera_position: Vector3) -> void:
 	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PARTS_JSON))
+	var circles := {}
+	for item in JSON.parse_string(FileAccess.get_file_as_string(LAYOUT_JSON))["items"]:
+		circles[item["id"]] = item
 	for p in data["parts"]:
 		_row_count = maxi(_row_count, int(p["row"]) + 1)
 	for p in data["parts"]:
@@ -83,6 +88,11 @@ func build(camera_position: Vector3) -> void:
 		var mat := ShaderMaterial.new()
 		mat.shader = GLOW_SHADER
 		g.material_override = mat
+		# у медальона сияние идёт от круга, а не от всей картинки: ниже круга в ней подставка или пустое поле
+		var item: Dictionary = circles.get(p["id"], {})
+		if item.get("mode", "") == "circle":
+			mat.set_shader_parameter("center_offset", Vector2(item["cx"] - p["cx"], p["cy"] - item["cy"]) * s.pixel_size)
+			mat.set_shader_parameter("figure_radius", 2.0 * (item["r"] + 1.0) * s.pixel_size / size)
 		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mat.set_shader_parameter("figure_seed", fmod(float(_sprites.size()) * 0.618034, 1.0))
 		add_child(g)

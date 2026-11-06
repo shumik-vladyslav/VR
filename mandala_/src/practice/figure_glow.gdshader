@@ -9,6 +9,8 @@ uniform float figure_seed = 0.0;
 uniform vec4 color : source_color = vec4(1.0, 0.88, 0.62, 1.0);
 // где кончается фигура (доля радиуса квада) — лучи начинаются от её края
 uniform float figure_radius = 0.57;
+// где центр фигуры относительно середины картинки (м): круг медальона выше, под ним подставка
+uniform vec2 center_offset = vec2(0.0);
 
 varying float seed;
 
@@ -16,8 +18,10 @@ float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 void vertex() {
 	seed = figure_seed;
-	// всегда лицом к камере
-	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	// всегда лицом к камере; сдвиг и размер — вместе с фигурой, даже когда её увеличивают
+	VERTEX.xy += center_offset;
+	float scale = length(MODEL_MATRIX[0].xyz);
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * scale, INV_VIEW_MATRIX[1] * scale, INV_VIEW_MATRIX[2] * scale, MODEL_MATRIX[3]);
 }
 
 void fragment() {

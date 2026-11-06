@@ -150,6 +150,7 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 		env.ssao_enabled = false
 		env.ssil_enabled = false
 		env.ssr_enabled = false
+		env.adjustment_enabled = false   # кривая OpenGL применится к зеркалу в общем кадре, второй раз не нужна
 		_mirror_cam.environment = env
 	_viewport.add_child(_mirror_cam)
 	_mirror = MeshInstance3D.new()
