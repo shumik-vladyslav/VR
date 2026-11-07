@@ -25,7 +25,7 @@ const RED_SHOW := 97.0
 const RED_TOSS := 195.5
 const RED_TOSS_TIME := 3.5
 
-const REFUGE_MANTRA := "НАМО  ГУРУДЭВА\nНАМО  САТЬЯ  ДХАРМА\nНАМО  АРЬЯ  САНГХА"
+const REFUGE_MANTRA := "Намо Гурудэва,\nнамо Сатья Дхарма,\nнамо Арья Сангха"
 
 # [начало, конец, заголовок, текст]
 const CAPTIONS := [

@@ -226,6 +226,7 @@ func _process(delta: float) -> void:
 		print("PRACTICE frame=%d t=%.2f beams=%.2f white=%.2f" % [_frames, _t, _fx.center_beams, _fx.whiteout])
 	if not show_text:
 		_fx.text_alpha = 0.0
+		_fx.chart_alpha = 0.0
 	_fx.commit()
 
 func _unhandled_input(event: InputEvent) -> void:

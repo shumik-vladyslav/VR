@@ -11,6 +11,9 @@ const PANEL_SHADER := preload("res://src/practice/text_panel.gdshader")
 const RAY_SHADER := preload("res://src/practice/ray_beam.gdshader")
 const Transformation := preload("res://src/practice/transformation.gd")
 const SceneExtras := preload("res://src/practice/scene_extras.gd")
+const BODY_CHART_SHADER := preload("res://src/practice/body_chart.gdshader")
+const BODY_CHART_SIZE := Vector2(1.05, 1.54)
+const BODY_CHART_POSITION := Vector3(-2.35, -0.55, -2.4)   # слева внизу, на камере — как текст
 ## Ом в лотосе — тот же, что на заставке приложения
 const OM_LOTUS := preload("res://images/om_big.png")
 const OM_CHEST_SIZE := 0.26     # знак у груди практикующего (м)
@@ -21,6 +24,7 @@ const OM_GOLD_SHADER := preload("res://src/practice/om_gold.gdshader")
 const OM_GOLD_CENTER_SIZE := 3.2
 const OM_GOLD_FORWARD := 0.3    # впереди сияния, чтобы толщина не уходила в него
 const OM_GOLD_SWAY := 0.22      # покачивается, чтобы был виден объём (радианы)
+const TITLE_PIXEL := 0.0011
 
 const BEAM_COUNT := 44          # лучей во все стороны
 const BEAMS_TO_PLAYER := 5      # лучей к практикующему
@@ -90,6 +94,11 @@ var ring_color := Color(1.0, 0.88, 0.62)
 var rays_tint := Color(1.0, 1.0, 1.0, 0.0)
 ## Ом — золотой объёмный, а не картинка
 var om_gold := false
+## Садхана 21 Ом: схема тела — номер таттвы, видимость 0..1, вспышка на каждый Ом; заголовок крупнее в ключевой момент
+var chart_part := 0
+var chart_alpha := 0.0
+var chart_pulse := 0.0
+var title_scale := 1.0
 
 ## Древо Прибежища (refuge_tree.gd), если есть
 var tree: Node3D
@@ -138,6 +147,7 @@ var _om_image: MeshInstance3D
 var _center_om_image: MeshInstance3D
 var _om_gold_chest: MeshInstance3D
 var _center_om_gold: MeshInstance3D
+var _chart: MeshInstance3D
 ## Свет, оставшийся от прошлого этапа (переход между этапами идёт через свет, а не обрывается)
 var carry_white := 0.0
 
@@ -270,8 +280,12 @@ func setup(camera: Camera3D, aura_position: Vector3) -> void:
 	_text.position = Vector3(0, 1.5, -2.4)
 	_text.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	camera.add_child(_text)
+	_chart = _quad(BODY_CHART_SHADER, BODY_CHART_SIZE)
+	_chart.material_override.render_priority = 45
+	_chart.position = BODY_CHART_POSITION
+	camera.add_child(_chart)
 	# то, что висит у глаз, не должно попадать в отражение зеркала
-	for v in [_veil, _panel, _title, _text, _om]:
+	for v in [_veil, _panel, _title, _text, _om, _chart]:
 		(v as VisualInstance3D).layers = Transformation.OVERLAY_LAYER
 	_extras = SceneExtras.new()
 	add_child(_extras)
@@ -311,6 +325,7 @@ func reset() -> void:
 	ray_flowers = -1.0; red_flowers = 0.0; red_circle = 0.0; red_toss = 0.0
 	sparkle = 0.0; ring_phase = -1.0; ring_strength = 0.0; ring_color = Color(1.0, 0.88, 0.62)
 	rays_tint = Color(1.0, 1.0, 1.0, 0.0)
+	chart_part = 0; chart_alpha = 0.0; chart_pulse = 0.0; title_scale = 1.0
 
 func commit() -> void:
 	_commit_datta()
@@ -371,6 +386,7 @@ func commit() -> void:
 	_extras.commit(sun, shiva, shiva_flash, wave_phase, wave_strength)
 	_extras.commit_vision(sparkle, om_world_position(), ring_phase, ring_strength, ring_color)
 
+	_title.pixel_size = TITLE_PIXEL * title_scale
 	_title.text = title
 	_text.text = text
 	for l in [_title, _text]:
@@ -378,6 +394,11 @@ func commit() -> void:
 		l.outline_modulate.a = text_alpha * 0.6
 		l.visible = text_alpha > 0.002
 	_update_panel()
+	var chart := _chart.material_override as ShaderMaterial
+	_chart.visible = chart_alpha > 0.002
+	chart.set_shader_parameter("part", chart_part)
+	chart.set_shader_parameter("alpha", chart_alpha)
+	chart.set_shader_parameter("pulse", chart_pulse)
 
 ## Объёмный Даттатрейя появляется сразу целиком (этап прячет момент появления в datta_light)
 func _commit_datta() -> void:
@@ -554,7 +575,7 @@ func _quad(shader: Shader, size: Vector2) -> MeshInstance3D:
 func _label(font_size: int) -> Label3D:
 	var l := Label3D.new()
 	l.font_size = font_size
-	l.pixel_size = 0.0011
+	l.pixel_size = TITLE_PIXEL
 	l.outline_size = 10
 	l.modulate = Color(1.0, 0.95, 0.85)
 	l.outline_modulate = Color(0.05, 0.03, 0.1, 0.6)

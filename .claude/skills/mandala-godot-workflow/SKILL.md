@@ -81,6 +81,7 @@ $env:SCENE="res://teurgia1.tscn"; $env:OUT="<scratchpad>\shot.png"; $env:CAM="0,
 
 - `practice.gd` — узел `Practice` в `teurgia1.tscn`: список этапов `STAGES`, звук, время, камера/ходьба, клавиши (WASD, мышь, Q/E, ←/→, ↑/↓, 1…9, Пробел, Esc).
 - `practice_menu.gd` — меню по Esc (пауза, перемотка, этапы, подсказки, настройки, выход); общий `Menu` из `menu_layer.tscn` в практике не открывается. `PRACTICE_MENU=1` — открыть меню сразу, для кадра.
+- `body_chart.gdshader` — схема тела на этапе 3: `fx.chart_part` (таттва 1…21), `chart_alpha`, `chart_pulse`.
 - Этап — `stageN_*.gd` с `TITLE`, `AUDIO`, `DURATION`, `CUES` и `apply(t, fx)`: все эффекты считаются из времени записи `t`, без накопленного состояния (поэтому работает перемотка). Новый этап — новый файл + строка в `STAGES`.
 - `practice_fx.gd` — эффекты (знак Ом у груди, сияние, свет в глазах, текст, древо); `refuge_tree.gd` — древо Прибежища из `images/refuge_tree/parts`.
 - Проверка кадром: `$env:PRACTICE_STAGE=2; $env:PRACTICE_T=50; & $G --path ... res://teurgia1.tscn --windowed --resolution 1280x720 --write-movie <папка>\f.png --fixed-fps 10 --quit-after 25` (мышь в таком запуске отключена; `PRACTICE_POSE="x,y,z,yaw°,pitch°"` — другая точка). Время идёт по записи, а сцена грузится ~1.5 с, поэтому последний кадр (`f00000024`) — это примерно `PRACTICE_T + 4` с; точное время покажет `PRACTICE_DEBUG=1` (печатает `t` каждый кадр). Папку для кадров указывай абсолютным путём, иначе кадры окажутся внутри проекта.
