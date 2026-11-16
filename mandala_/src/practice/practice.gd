@@ -90,10 +90,12 @@ var _debug_print := OS.has_environment("PRACTICE_DEBUG")
 var _test_run := not OS.get_environment("PRACTICE_T").is_empty()
 
 func _ready() -> void:
-	# Скрипт сцены крутит камеру вокруг Датты — во время практики камерой управляет практика
+	# Скрипт сцены крутит камеру вокруг Датты и по Esc открывает старое меню — во время практики этим управляет
+	# практика. Отключаем после готовности сцены: её _Ready идёт позже нашего и сам снова включает ввод,
+	# иначе по Esc под новым меню открывалось и старое, а после выбора в новом оставалось на экране
 	var scene := get_parent()
-	scene.set_process_input(false)
-	scene.set_physics_process(false)
+	scene.set_process_input.call_deferred(false)
+	scene.set_physics_process.call_deferred(false)
 
 	var datta: Node3D = scene.get_node("Gods/Datta")
 	var origin: Node3D = datta.get_node("CameraOrigin")
