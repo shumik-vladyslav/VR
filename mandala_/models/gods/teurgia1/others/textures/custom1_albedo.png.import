@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c3nh1c3isrdwq"
-path.bptc="res://.godot/imported/custom1_albedo.png-cfa2ad37db6d43df69eb38112a852545.bptc.ctex"
+path.s3tc="res://.godot/imported/custom1_albedo.png-cfa2ad37db6d43df69eb38112a852545.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -12,12 +12,12 @@ metadata={
 [deps]
 
 source_file="res://models/gods/teurgia1/others/textures/custom1_albedo.png"
-dest_files=["res://.godot/imported/custom1_albedo.png-cfa2ad37db6d43df69eb38112a852545.bptc.ctex"]
+dest_files=["res://.godot/imported/custom1_albedo.png-cfa2ad37db6d43df69eb38112a852545.s3tc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=true
+compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=2

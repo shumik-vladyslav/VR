@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dw41u25omimve"
-path.bptc="res://.godot/imported/Shiva_Ucupaint automap Normal.png-96bd20ffbfbc5524705d885d96a3f481.bptc.ctex"
+path.s3tc="res://.godot/imported/Shiva_Ucupaint automap Normal.png-96bd20ffbfbc5524705d885d96a3f481.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -15,12 +15,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/gods/teurgia1/shiva/Shiva_Ucupaint automap Normal.png"
-dest_files=["res://.godot/imported/Shiva_Ucupaint automap Normal.png-96bd20ffbfbc5524705d885d96a3f481.bptc.ctex"]
+dest_files=["res://.godot/imported/Shiva_Ucupaint automap Normal.png-96bd20ffbfbc5524705d885d96a3f481.s3tc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=true
+compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

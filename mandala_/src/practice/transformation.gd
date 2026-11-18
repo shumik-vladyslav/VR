@@ -141,7 +141,8 @@ func setup(camera: Camera3D, pivot: Node3D, parts: Array[Node3D]) -> void:
 	_viewport = SubViewport.new()
 	# зеркало крупное и близко — отражению нужно высокое разрешение и сглаживание, иначе руки и плечи «лесенкой»
 	_viewport.size = Vector2i(MIRROR_WIDTH, int(MIRROR_WIDTH * MIRROR_SIZE.y / MIRROR_SIZE.x))
-	_viewport.msaa_3d = Viewport.MSAA_4X
+	# в режиме OpenGL сглаживания для отражения нет: старые видеокарты не создают такую цель отрисовки
+	_viewport.msaa_3d = Viewport.MSAA_4X if RenderingServer.get_rendering_device() != null else Viewport.MSAA_DISABLED
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(_viewport)
 	_mirror_cam = Camera3D.new()
@@ -208,7 +209,9 @@ const HEAD_BACK := "HeadBack"
 ## Из части Даттатрейи (узел модели, mala, tilaki…) сделать часть божества медитации без атрибутов:
 ## убрать предметы в руках, боковые головы, верхние руки; к голове достроить затылок с волосами.
 ## Координаты частей считаются относительно part (его родитель — место модели, Даттатрейя стоит в начале координат).
-static func make_meditation_body(part: Node3D) -> void:
+## Готовые меши берутся из BODY_CACHE: пересборка читает меш из видеокарты, а старые драйверы (AMD R5 через ANGLE)
+## его не отдают, и тело собиралось пустым. Без кэша (use_cache = false) — собрать заново; кэш пишет tools/bake_meditation_body.gd
+static func make_meditation_body(part: Node3D, use_cache := true) -> void:
 	var is_head := false
 	for m in part.find_children("*", "GeometryInstance3D", true, false):
 		var g := m as GeometryInstance3D
@@ -226,7 +229,10 @@ static func make_meditation_body(part: Node3D) -> void:
 		while n != part and n is Node3D:
 			to_model = (n as Node3D).transform * to_model
 			n = n.get_parent()
-		if ARM_MESHES.has(mesh_name):
+		var cached := cached_mesh_path(part, mi)
+		if use_cache and (ARM_MESHES.has(mesh_name) or FACE_MESHES.has(mesh_name)) and ResourceLoader.exists(cached):
+			mi.mesh = load(cached)
+		elif ARM_MESHES.has(mesh_name):
 			BodyStrip.strip(mi, to_model, _is_lower_arm_or_torso, _is_armlet if mesh_name == "Sphere" else _is_torso_skin, _is_arm_stub)
 			# одна сторона (рука, плечо) собирается чисто — отражаем её на другую, тело становится симметричным
 			var side := float(OS.get_environment("MIRROR_SIDE")) if OS.has_environment("MIRROR_SIDE") else GOOD_SIDE
@@ -236,6 +242,12 @@ static func make_meditation_body(part: Node3D) -> void:
 			BodyStrip.strip(mi, to_model, _is_central_head)
 	if is_head:
 		_add_neck_back(part)
+
+## Где лежит готовый меш этой части тела
+static func cached_mesh_path(part: Node3D, mi: MeshInstance3D) -> String:
+	return BODY_CACHE + String(part.name) + "__" + String(part.get_path_to(mi)).validate_filename() + ".res"
+
+const BODY_CACHE := "res://models/gods/teurgia1/meditation_body/"
 
 ## Задняя сторона шеи: у модели она общая для трёх голов и убрана вместе с боковыми — без неё шея с прямыми
 ## срезами. Затылок не нужен: его закрывают волосы центральной головы (достроенный купол торчал тёмным пятном).

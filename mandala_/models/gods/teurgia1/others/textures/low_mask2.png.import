@@ -16,7 +16,7 @@ dest_files=["res://.godot/imported/low_mask2.png-5a77e34a2a438639cac95ec5b3f1527
 [params]
 
 compress/mode=0
-compress/high_quality=true
+compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=2
