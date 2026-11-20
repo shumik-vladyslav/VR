@@ -122,3 +122,4 @@ camera_attributes = SubResource("CameraAttributesPractical_fnxgm")
 unique_name_in_owner = true
 IsStartMandalaShown = true
 IsStartTeurgia1Shown = true
+IsStartMandala24Shown = true

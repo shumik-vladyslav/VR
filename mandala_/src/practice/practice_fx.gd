@@ -11,6 +11,7 @@ const PANEL_SHADER := preload("res://src/practice/text_panel.gdshader")
 const RAY_SHADER := preload("res://src/practice/ray_beam.gdshader")
 const Transformation := preload("res://src/practice/transformation.gd")
 const SceneExtras := preload("res://src/practice/scene_extras.gd")
+const V2Extras := preload("res://src/practice/v2/v2_extras.gd")
 const BODY_CHART_SHADER := preload("res://src/practice/body_chart.gdshader")
 const BODY_CHART_SIZE := Vector2(1.05, 1.54)
 const BODY_CHART_POSITION := Vector3(-2.35, -0.55, -2.4)   # слева внизу, на камере — как текст
@@ -99,6 +100,21 @@ var chart_part := 0
 var chart_alpha := 0.0
 var chart_pulse := 0.0
 var title_scale := 1.0
+## Новая версия практики (v2_extras.gd): фон (вид от, вид к, переход, видимость), поток света сверху, дождь лепестков,
+## рост Даттатрейи, кольцо мантры и его поворот, шар золотого света (фаза, −1 — нет), пол мандалы виден
+var sky := 0.0
+var sky_from := 0
+var sky_to := 0
+var sky_blend := 0.0
+var light_column := 0.0
+var petals := 0.0
+var datta_grow := 1.0
+var mantra_ring := 0.0
+var ring_turn := 0.0
+var ball_phase := -1.0
+var floor_visible := 1.0
+## 0..1 — слог Драм в пространстве на месте Даттатрейи (повторная манифестация)
+var dram := 0.0
 
 ## Древо Прибежища (refuge_tree.gd), если есть
 var tree: Node3D
@@ -143,6 +159,7 @@ var _ray_hits: Array[MeshInstance3D] = []
 var _datta_light: MeshInstance3D
 var _transformation
 var _extras
+var _v2
 var _om_image: MeshInstance3D
 var _center_om_image: MeshInstance3D
 var _om_gold_chest: MeshInstance3D
@@ -304,6 +321,17 @@ func setup_transformation() -> void:
 	add_child(_transformation)
 	_transformation.setup(_camera, _om_pivot, datta_parts)
 
+## Начало этапа: убрать то, что осталось от прошлого (летящие лепестки)
+func stage_started() -> void:
+	if _v2:
+		_v2.clear()
+
+## Подключить образы новой версии практики — после datta_parts; floor_node — пол мандалы (в пространстве он исчезает)
+func setup_v2(floor_node: Node3D) -> void:
+	_v2 = V2Extras.new()
+	add_child(_v2)
+	_v2.setup(_camera, floor_node, datta_parts)
+
 ## Перенести знак Ом к практикующему: позиция глаз и поворот головы по горизонтали
 func follow(eye_position: Vector3, yaw: float) -> void:
 	if _om_pivot:
@@ -326,6 +354,8 @@ func reset() -> void:
 	sparkle = 0.0; ring_phase = -1.0; ring_strength = 0.0; ring_color = Color(1.0, 0.88, 0.62)
 	rays_tint = Color(1.0, 1.0, 1.0, 0.0)
 	chart_part = 0; chart_alpha = 0.0; chart_pulse = 0.0; title_scale = 1.0
+	sky = 0.0; sky_from = 0; sky_to = 0; sky_blend = 0.0; light_column = 0.0; petals = 0.0
+	datta_grow = 1.0; mantra_ring = 0.0; ring_turn = 0.0; ball_phase = -1.0; floor_visible = 1.0; dram = 0.0
 
 func commit() -> void:
 	_commit_datta()
@@ -385,6 +415,10 @@ func commit() -> void:
 		tree.others = tree_others
 	_extras.commit(sun, shiva, shiva_flash, wave_phase, wave_strength)
 	_extras.commit_vision(sparkle, om_world_position(), ring_phase, ring_strength, ring_color)
+	if _v2:
+		_v2.commit({"sky": sky, "sky_from": sky_from, "sky_to": sky_to, "sky_blend": sky_blend, "column": light_column,
+			"petals": petals, "datta_grow": datta_grow, "ring": mantra_ring, "ring_turn": ring_turn, "ball_phase": ball_phase,
+			"floor": floor_visible, "dram": dram})
 
 	_title.pixel_size = TITLE_PIXEL * title_scale
 	_title.text = title

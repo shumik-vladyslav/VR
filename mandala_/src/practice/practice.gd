@@ -4,16 +4,33 @@ extends Node3D
 ## → / ← — к следующему / предыдущему шагу, ↑ / ↓ — на 15 секунд вперёд / назад, 1…9 — перейти к этапу, Пробел — пауза,
 ## Esc — меню (practice_menu.gd).
 
-const STAGES := [
-	preload("res://src/practice/stage1_guru_yoga.gd"),
-	preload("res://src/practice/stage2_space_purification.gd"),
+## Версии практики: первая — по первым записям, вторая — по новому сценарию (src/practice/v2). Выбор — в меню
+const VERSIONS := {
+	1: [
+		preload("res://src/practice/stage1_guru_yoga.gd"),
+		preload("res://src/practice/stage2_space_purification.gd"),
+		preload("res://src/practice/stage3_om21.gd"),
+		preload("res://src/practice/stage4_refuge.gd"),
+		preload("res://src/practice/stage5_three_rays.gd"),
+		preload("res://src/practice/stage6_transformation.gd"),
+		preload("res://src/practice/stage7_datta_stava.gd"),
+		preload("res://src/practice/stage8_sealing.gd"),
+		preload("res://src/practice/stage9_dedication.gd"),
+	],
+	2: V2_STAGES,
+}
+const V2_STAGES := [
+	preload("res://src/practice/v2/stage01_guru_yoga.gd"),
+	preload("res://src/practice/v2/stage02_space.gd"),
 	preload("res://src/practice/stage3_om21.gd"),
-	preload("res://src/practice/stage4_refuge.gd"),
-	preload("res://src/practice/stage5_three_rays.gd"),
-	preload("res://src/practice/stage6_transformation.gd"),
-	preload("res://src/practice/stage7_datta_stava.gd"),
-	preload("res://src/practice/stage8_sealing.gd"),
-	preload("res://src/practice/stage9_dedication.gd"),
+	preload("res://src/practice/v2/stage04_refuge.gd"),
+	preload("res://src/practice/v2/stage05_transformation.gd"),
+	preload("res://src/practice/v2/stage06_invocation.gd"),
+	preload("res://src/practice/v2/stage07_mantra.gd"),
+	preload("res://src/practice/v2/stage08_laya.gd"),
+	preload("res://src/practice/v2/stage09_manifestation.gd"),
+	preload("res://src/practice/v2/stage10_sealing.gd"),
+	preload("res://src/practice/v2/stage11_dedication.gd"),
 ]
 const PracticeFx := preload("res://src/practice/practice_fx.gd")
 const RefugeTree := preload("res://src/practice/refuge_tree.gd")
@@ -64,6 +81,9 @@ const COMPAT_KEY_LIGHT := 0.1
 var _fx
 var _player: AudioStreamPlayer
 var _stage
+## Этапы выбранной версии практики (VERSIONS)
+var _stages: Array = VERSIONS[1]
+var _version := 1
 var _stage_index := -1
 var _t := 0.0
 var _delay := 0.0
@@ -140,6 +160,7 @@ func _ready() -> void:
 	# сияние святых — за Даттой в центре древа
 	_fx.setup(cam, tree.figure_position("datta") + Vector3(0, 0.25, -0.5))
 	_fx.setup_transformation()
+	_fx.setup_v2(scene.get_node_or_null("MandalaFloor"))
 	_apply_camera()
 
 	_offering = Offering.new()
@@ -161,15 +182,18 @@ func _ready() -> void:
 	if not debug_t.is_empty():
 		_delay = 0.0
 		var debug_stage := OS.get_environment("PRACTICE_STAGE")
-		_start_stage(clampi(int(debug_stage) - 1, 0, STAGES.size() - 1) if not debug_stage.is_empty() else 0, float(debug_t))
+		_start_stage(clampi(int(debug_stage) - 1, 0, _stages.size() - 1) if not debug_stage.is_empty() else 0, float(debug_t))
 	# Для проверки: PRACTICE_MENU=1 — сразу открыть меню
 	if OS.has_environment("PRACTICE_MENU"):
 		_open_menu.call_deferred()
 
 func _setup_menu() -> void:
-	var titles: Array[String] = []
-	for s in STAGES:
-		titles.append(s.TITLE)
+	var titles := {}
+	for v in VERSIONS:
+		var list: Array[String] = []
+		for s in VERSIONS[v]:
+			list.append(s.TITLE)
+		titles[v] = list
 	_menu = PracticeMenu.new()
 	add_child(_menu)
 	_menu.close_pressed.connect(_close_menu)
@@ -178,14 +202,33 @@ func _setup_menu() -> void:
 	_menu.seek_to.connect(_seek_to)
 	_menu.step_pressed.connect(_seek_cue)
 	_menu.stage_step_pressed.connect(func(direction: int) -> void:
-		_start_stage(clampi(_stage_index + direction, 0, STAGES.size() - 1), 0.0))
+		_start_stage(clampi(_stage_index + direction, 0, _stages.size() - 1), 0.0))
 	_menu.stage_picked.connect(_pick_stage)
 	_menu.speed_changed.connect(_set_speed)
 	_menu.om_gold_changed.connect(func(gold: bool) -> void: _fx.om_gold = gold)
 	_menu.volume_changed.connect(func(linear: float) -> void: _player.volume_db = linear_to_db(linear))
 	_menu.sensitivity_changed.connect(func(value: float) -> void: mouse_sensitivity = value)
 	_menu.subtitles_changed.connect(func(on: bool) -> void: show_text = on)
-	_menu.setup(titles, mouse_sensitivity, show_text)
+	_menu.version_changed.connect(_set_version)
+	# версию выбрали кнопкой главного меню («Теургия 1» / «Теургия 1 — новая версия», Menu.cs)
+	var forced := 0
+	var root := get_tree().root
+	if root.has_meta("practice_version"):
+		forced = int(root.get_meta("practice_version"))
+		root.remove_meta("practice_version")
+	# для проверки: PRACTICE_VERSION=2 — сразу эта версия
+	if OS.has_environment("PRACTICE_VERSION"):
+		forced = int(OS.get_environment("PRACTICE_VERSION"))
+	_menu.setup(titles, forced if VERSIONS.has(forced) else 0, mouse_sensitivity, show_text)
+
+## Другая версия практики: свой список этапов; если практика уже шла — начинается с первого этапа
+func _set_version(version: int) -> void:
+	if version == _version or not VERSIONS.has(version):
+		return
+	_version = version
+	_stages = VERSIONS[version]
+	if _stage != null or _finished:
+		_start_stage(0, 0.0)
 
 func _process(delta: float) -> void:
 	_frames += 1
@@ -214,6 +257,9 @@ func _process(delta: float) -> void:
 	if _t >= _stage.DURATION:
 		_next_stage()
 		return
+	# этапы новой версии задают только то, что им нужно, — остальное каждый кадр по умолчанию
+	if _version == 2:
+		_fx.reset()
 	_stage.apply(_t, _fx)
 	_stage_time += delta * _speed
 	_fx.carry_white = _carry_white * (1.0 - smoothstep(0.0, CARRY_FADE, _stage_time))
@@ -260,7 +306,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.physical_keycode >= KEY_KP_1 and event.physical_keycode <= KEY_KP_9:
 		digit = event.physical_keycode - KEY_KP_1
 	if digit >= 0:
-		if digit < STAGES.size():
+		if digit < _stages.size():
 			_pick_stage(digit)
 		return
 	if _stage == null:
@@ -336,13 +382,14 @@ func _apply_camera() -> void:
 func _start_stage(index: int, at: float) -> void:
 	_stop_background_music()
 	_stage_index = index
-	_stage = STAGES[index].new()
+	_stage = _stages[index].new()
 	# сколько света было на экране в конце прошлого этапа — он не обрывается, а плавно гаснет
 	_carry_white = maxf(_fx.whiteout, _fx.carry_white)
 	_stage_time = 0.0
 	_fx.reset()
+	_fx.stage_started()
 	# столы манасика-пуджи — только на этапе, где она есть
-	_offering.set_puja_visible(STAGES[index].get_script_constant_map().has("PUJA"))
+	_offering.set_puja_visible(_stages[index].get_script_constant_map().has("PUJA"))
 	_finished = false
 	_paused = _paused and _menu.is_open()   # перемотка из меню на другой этап паузу не снимает
 	_t = at
@@ -356,7 +403,7 @@ func _start_stage(index: int, at: float) -> void:
 	_player.stream_paused = _paused
 
 func _next_stage() -> void:
-	if _stage_index + 1 < STAGES.size():
+	if _stage_index + 1 < _stages.size():
 		_start_stage(_stage_index + 1, 0.0)
 		return
 	# Все готовые этапы пройдены

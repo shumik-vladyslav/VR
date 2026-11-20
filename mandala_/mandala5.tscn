@@ -182,6 +182,7 @@ camera_attributes = SubResource("CameraAttributesPractical_wfb0c")
 unique_name_in_owner = true
 IsStartDattaShown = true
 IsStartTeurgia1Shown = true
+IsStartMandala24Shown = true
 
 [node name="SelectableMenu" parent="." instance=ExtResource("10_ny4vv")]
 unique_name_in_owner = true

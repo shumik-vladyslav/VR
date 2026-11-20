@@ -9,3 +9,6 @@ Thumbs.db
 
 # Экспортированные сборки
 /build/
+
+# архив папки export/datta_blender (дубликат, больше лимита GitHub 100 МБ)
+export/*.zip

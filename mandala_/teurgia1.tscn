@@ -9,7 +9,7 @@
 [ext_resource type="PackedScene" path="res://models/gods/teurgia1/others/lotos.tscn" id="10_6ay2v"]
 [ext_resource type="PackedScene" path="res://models/gods/teurgia1/others/tilaki.tscn" id="11_33425"]
 [ext_resource type="PackedScene" path="res://models/gods/teurgia1/floor/mandala_floor.tscn" id="11_tpb5d"]
-[ext_resource type="Texture2D" path="res://textures/teurgia1_sky.hdr" id="12_fuw5e"]
+[ext_resource type="Texture2D" uid="uid://cskdtqsnwjrjd" path="res://textures/teurgia1_sky.hdr" id="12_fuw5e"]
 [ext_resource type="PackedScene" uid="uid://bpniq2cl4sq8n" path="res://src/menu/menu_layer.tscn" id="14_qfjil"]
 [ext_resource type="Script" path="res://src/practice/practice.gd" id="16_practice"]
 

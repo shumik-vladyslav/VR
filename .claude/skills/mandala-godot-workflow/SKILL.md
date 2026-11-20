@@ -38,7 +38,8 @@ description: Как работать с проектом «мандала» (God
 ## Устройство сцен
 
 - `Initial.tscn` → `src/app/App.tscn` (сплэш + меню) → `main.tscn` (Датта), `mandala5.tscn` (Датта + 5 божеств), `teurgia1.tscn` (копия Датты для экспериментов).
-- Меню `src/menu/menu_layer.tscn` + `Menu.cs`: кнопки сцен показываются по свойствам `IsStart…Shown`, которые выставляет каждая сцена у своего экземпляра `Menu`.
+- Меню `src/menu/menu_layer.tscn` + `Menu.cs`: кнопки сцен показываются по свойствам `IsStart…Shown`, которые выставляет каждая сцена у своего экземпляра `Menu`. После правки `Menu.cs` — `dotnet build` в `mandala_`.
+- `mandala24.tscn` — мандала 24 божеств картинками (`src/mandala24/mandala24.gd`: таблица `DEITIES` — id, подпись, место, высота, круг; пол-янтра `yantra_floor.gdshader`). Картинки `images/mandala24/parts/<id>.png`, список — `images/mandala24/СПИСОК_БОЖЕСТВ.md`. По сцене ходят от первого лица, как в «Теургии 1» (WASD, мышь, E/Q, 1/2/3 — у ворот / перед Даттой / сверху); пол-янтра увеличена `FLOOR_SCALE`. Кадр: `M24_SHOWN=1 M24_VIEW=1|2|3` (или `M24_POSE="x,y,z,поворот°,наклон°"`) + `--write-movie` (render_shot.gd не подходит — фигуры строит корневой скрипт). Сгенерированные картинки (фигура в золотом ореоле на фиолетовом фоне с искрами) лежат в `images/mandala24/_source/gen/<id>.webp|png` и вырезаются `cut_generated.py` (`-- <gen> <вывод> --preview <папка> [id…]`; лист `sheet_circles.png` показывает найденный круг ореола) → копировать в `parts/`.
 - В Датте свет: 3 прожектора на `MainCamera` (едут с камерой), в `teurgia1` ещё `Environment/KeyLight` и `RimLight` (неподвижные). Камера крутится вокруг `Gods/Datta/CameraOrigin` (`Scene.cs`).
 - Модель Датты (`datta.glb`): голова с тремя лицами `Golova_low` + глаза `Glasa_low` → `Material_3`; тело/руки `Body_low`, стопы `Stupni_low`, одежда, волосы → `Material_1`; атрибуты → `Material_2`. Текстуры HDRP 4096²: MaskMap R=metallic, G=AO, A=**smoothness** (не roughness). Мир Godot: Y вверх, лицо смотрит в +Z; в Blender после импорта glTF: Z вверх, лицо в −Y.
 
@@ -99,6 +100,10 @@ Godot без `rcedit` значок не меняет, поэтому после 
 Перед тем как ставить эффекты этапа, распознай запись — смысл этапа и моменты берутся из неё, а не из догадок по паузам.
 1. WAV 16 кГц моно через Blender `aud`: `aud.Sound(in).resample(16000, True).rechannel(1).write(out.wav, 16000, aud.CHANNELS_MONO, aud.FORMAT_S16, aud.CONTAINER_WAV, aud.CODEC_PCM)`.
 2. `C:\Users\shumi\tools\whisper\bin\Release\whisper-cli.exe -m C:\Users\shumi\tools\whisper\ggml-small.bin -l ru -t 8 -f out.wav` — печатает фразы с таймкодами `[мм:сс.ммм --> мм:сс.ммм]`. Имена и санскрит путает («Дататрия», «Годы Словений» = «волны благословений») — смысл и время верные.
+
+### Картинки божеств без ореола — `cut_halo.py`
+Для нейросетей «картинка → 3D» (TRELLIS.2 на huggingface.co/spaces/microsoft/TRELLIS.2): с ореолом они лепят фигуру барельефом на диске. Скрипт отделяет фигуру по карте глубины (Depth Anything V2, onnxruntime из `C:\Users\shumi\tools\blender_py`):
+`& $B --background --factory-startup --python "$S\cut_halo.py" -- mandala_\images\mandala24\parts <вывод> --preview <scratchpad> [id…]` → `<id>.png` с прозрачным фоном и `sheet.png` (все на тёмном фоне). Готовые лежат в `images/mandala24/_source/no_halo/` (папка с `.gdignore`). Датту не обрабатывать — у неё другая картинка, и 3D-модель уже есть.
 
 ### Вырезание фигур из картинки — `cut_figures.py`
 Разметка `layout.json` (круг-медальон или рамка/эллипс с вырезанием фиолетового фона, `"base": false` — без подставки), затем `& $B ... --python "$S\cut_figures.py" -- <папка> --preview <scratchpad>` → `parts/*.png` + `parts.json`. Для новых PNG создай `.import` как для 3D (см. выше).

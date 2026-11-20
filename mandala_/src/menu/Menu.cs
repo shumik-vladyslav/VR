@@ -10,6 +10,9 @@ public partial class Menu : CanvasLayer
 	private Button _dattaButton = default!;
 	private Button _mandalaButton = default!;
 	private Button _teurgia1Button = default!;
+	private Button _teurgia1NewButton = default!;
+	private Button _mandala24Button = default!;
+	private Button _mandala24_3DButton = default!;
 	private Button _exitButton = default!;
 	private Button _selectAudioButton = default!;
 	private Button _clearPlaylistButton = default!;
@@ -30,6 +33,9 @@ public partial class Menu : CanvasLayer
 	[Export] public bool IsStartDattaShown { get; set; }
 	[Export] public bool IsStartMandalaShown { get; set; }
 	[Export] public bool IsStartTeurgia1Shown { get; set; }
+	[Export] public bool IsStartMandala24Shown { get; set; }
+	/// Кнопка «24 божества 3Д»: по умолчанию видна везде, в самой 3D-сцене скрыта
+	[Export] public bool IsStartMandala24_3DShown { get; set; } = true;
 
 	[Signal]
 	public delegate void OpenEventHandler();
@@ -47,12 +53,28 @@ public partial class Menu : CanvasLayer
 		_dattaButton = GetNode<Button>("%DattaBtn");
 		_mandalaButton = GetNode<Button>("%MandalaBtn");
 		_teurgia1Button = GetNode<Button>("%Teurgia1Btn");
+		_mandala24Button = GetNode<Button>("%Mandala24Btn");
 		_mainMenuBtn = GetNode<Button>("%MainMenuBtn");
 		
 		_dattaButton.Visible = IsStartDattaShown;
 		//_mainMenuBtn.Visible = !IsStartDattaShown;
-		_mandalaButton.Visible = IsStartMandalaShown;
+		// в меню только практики и выход: «Мандала», музыка и настройки скрыты (узлы оставлены в menu_layer.tscn)
+		_mandalaButton.Visible = false;
 		_teurgia1Button.Visible = IsStartTeurgia1Shown;
+		// вторая кнопка — новая версия практики Теургии 1 (по новому сценарию); первая — старая
+		_teurgia1NewButton = (Button)_teurgia1Button.Duplicate();
+		_teurgia1NewButton.UniqueNameInOwner = false;
+		_teurgia1NewButton.Name = "Teurgia1NewBtn";
+		_teurgia1NewButton.Text = "Теургия 1 — новая версия";
+		_teurgia1Button.AddSibling(_teurgia1NewButton);
+		_mandala24Button.Visible = IsStartMandala24Shown;
+		// кнопка 3D-версии мандалы 24 божеств — копия кнопки с картинками, сразу под ней
+		_mandala24_3DButton = (Button)_mandala24Button.Duplicate();
+		_mandala24_3DButton.UniqueNameInOwner = false;
+		_mandala24_3DButton.Name = "Mandala24_3DBtn";
+		_mandala24_3DButton.Text = "24 божества 3Д";
+		_mandala24_3DButton.Visible = IsStartMandala24_3DShown;
+		_mandala24Button.AddSibling(_mandala24_3DButton);
 		_clearPlaylistButton = GetNode<Button>("%ClearPlaylistBtn");
 		_selectAudioButton = GetNode<Button>("%SelectAudioBtn");
 		_exitButton = GetNode<Button>("%ExitBtn");
@@ -75,6 +97,9 @@ public partial class Menu : CanvasLayer
 		_dattaButton.Pressed += DattaButtonOnPressed;
 		_mandalaButton.Pressed += MandalaButtonOnPressed;
 		_teurgia1Button.Pressed += Teurgia1ButtonOnPressed;
+		_teurgia1NewButton.Pressed += Teurgia1NewButtonOnPressed;
+		_mandala24Button.Pressed += Mandala24ButtonOnPressed;
+		_mandala24_3DButton.Pressed += Mandala24_3DButtonOnPressed;
 		_selectAudioButton.Pressed += SelectAudioButtonOnPressed;
 		_exitButton.Pressed += ()=> GetTree().Quit();
 		_fullScreen.Toggled += FullScreenToggled;
@@ -139,7 +164,7 @@ public partial class Menu : CanvasLayer
 	public void ShowPlayerControls()
 	{
 		LoadPauseState();
-		_playControl.Visible = true;
+		// кнопки плеера музыки убраны из меню
 	}
 	
 	public void HidePlayerControls()
@@ -206,10 +231,28 @@ public partial class Menu : CanvasLayer
 		GetTree().ChangeSceneToFile("res://mandala5.tscn");
 	}
 
-	private void Teurgia1ButtonOnPressed()
+	private void Teurgia1ButtonOnPressed() => OpenTeurgia1(1);
+
+	private void Teurgia1NewButtonOnPressed() => OpenTeurgia1(2);
+
+	/// Версию практики читает practice.gd при запуске сцены (метка "practice_version" у корня дерева)
+	private void OpenTeurgia1(int version)
 	{
 		HideMenu();
+		GetTree().Root.SetMeta("practice_version", version);
 		GetTree().ChangeSceneToFile("res://teurgia1.tscn");
+	}
+
+	private void Mandala24ButtonOnPressed()
+	{
+		HideMenu();
+		GetTree().ChangeSceneToFile("res://mandala24.tscn");
+	}
+
+	private void Mandala24_3DButtonOnPressed()
+	{
+		HideMenu();
+		GetTree().ChangeSceneToFile("res://mandala24_3d.tscn");
 	}
 
 	public override void _ExitTree()
@@ -217,6 +260,9 @@ public partial class Menu : CanvasLayer
 		base._ExitTree();
 		_dattaButton.Pressed -= DattaButtonOnPressed;
 		_teurgia1Button.Pressed -= Teurgia1ButtonOnPressed;
+		_teurgia1NewButton.Pressed -= Teurgia1NewButtonOnPressed;
+		_mandala24Button.Pressed -= Mandala24ButtonOnPressed;
+		_mandala24_3DButton.Pressed -= Mandala24_3DButtonOnPressed;
 		_fullScreen.Toggled -= FullScreenToggled;
 		_fileDialog.FilesSelected -= OnFilesSelected;
 		_selectAudioButton.Pressed -= SelectAudioButtonOnPressed;

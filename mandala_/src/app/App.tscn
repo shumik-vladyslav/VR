@@ -119,6 +119,7 @@ unique_name_in_owner = true
 IsStartDattaShown = true
 IsStartMandalaShown = true
 IsStartTeurgia1Shown = true
+IsStartMandala24Shown = true
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="App"]
 unique_name_in_owner = true

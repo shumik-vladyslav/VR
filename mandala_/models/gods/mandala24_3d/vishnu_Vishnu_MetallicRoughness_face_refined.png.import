@@ -1,0 +1,38 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://djpdprhvx0jy"
+path.s3tc="res://.godot/imported/vishnu_Vishnu_MetallicRoughness_face_refined.png-dd6b8fcc7349912b6b2f4eef756fa5b7.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "5f0ff8ad4d66007e5b58c407bfd60685"
+}
+
+[deps]
+
+source_file="res://models/gods/mandala24_3d/vishnu_Vishnu_MetallicRoughness_face_refined.png"
+dest_files=["res://.godot/imported/vishnu_Vishnu_MetallicRoughness_face_refined.png-dd6b8fcc7349912b6b2f4eef756fa5b7.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1

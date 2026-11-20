@@ -1,0 +1,34 @@
+{
+  "source": "_source/icon.webp",
+  "note": "Временные картинки 24 божеств, вырезанные из иконы мандалы (905×1280). key + ellipse — овал, фиолетовый фон убирается. Когда будут свои картинки, они кладутся в parts/ под теми же id.",
+  "items": [
+    {"id": "datta",          "mode": "key", "ellipse": true, "cx": 452, "cy": 590, "w": 120, "h": 130, "row": 0},
+
+    {"id": "sadyojata",      "mode": "key", "ellipse": true, "cx": 259, "cy": 597, "w": 60,  "h": 100, "row": 1},
+    {"id": "vamadeva",       "mode": "key", "ellipse": true, "cx": 452, "cy": 504, "w": 52,  "h": 80,  "row": 1},
+    {"id": "aghora",         "mode": "key", "ellipse": true, "cx": 452, "cy": 675, "w": 60,  "h": 95,  "row": 1},
+    {"id": "tatpurusha",     "mode": "key", "ellipse": true, "cx": 641, "cy": 597, "w": 60,  "h": 100, "row": 1},
+    {"id": "ishana_brahma",  "mode": "key", "ellipse": true, "cx": 452, "cy": 318, "w": 78,  "h": 120, "row": 1},
+
+    {"id": "brahma",         "mode": "key", "ellipse": true, "cx": 207, "cy": 606, "w": 48,  "h": 80,  "row": 2},
+    {"id": "sarasvati",      "mode": "key", "ellipse": true, "cx": 160, "cy": 606, "w": 48,  "h": 80,  "row": 2},
+    {"id": "vishnu",         "mode": "key", "ellipse": true, "cx": 411, "cy": 513, "w": 44,  "h": 70,  "row": 2},
+    {"id": "lakshmi",        "mode": "key", "ellipse": true, "cx": 495, "cy": 513, "w": 44,  "h": 70,  "row": 2},
+    {"id": "shiva",          "mode": "key", "ellipse": true, "cx": 418, "cy": 760, "w": 48,  "h": 80,  "row": 2},
+    {"id": "parvati",        "mode": "key", "ellipse": true, "cx": 468, "cy": 760, "w": 48,  "h": 80,  "row": 2},
+    {"id": "maheshvara",     "mode": "key", "ellipse": true, "cx": 697, "cy": 610, "w": 48,  "h": 80,  "row": 2},
+    {"id": "ganesha",        "mode": "key", "ellipse": true, "cx": 745, "cy": 610, "w": 48,  "h": 80,  "row": 2},
+
+    {"id": "kubera",         "mode": "key", "ellipse": true, "cx": 452, "cy": 438, "w": 62,  "h": 100, "row": 3},
+    {"id": "ishana",         "mode": "key", "ellipse": true, "cx": 680, "cy": 495, "w": 80,  "h": 100, "row": 3},
+    {"id": "indra",          "mode": "key", "ellipse": true, "cx": 840, "cy": 585, "w": 78,  "h": 104, "row": 3},
+    {"id": "agni",           "mode": "key", "ellipse": true, "cx": 775, "cy": 735, "w": 68,  "h": 110, "row": 3},
+    {"id": "dharmaraja",     "mode": "key", "ellipse": true, "cx": 452, "cy": 850, "w": 96,  "h": 104, "row": 3},
+    {"id": "nirriti",        "mode": "key", "ellipse": true, "cx": 115, "cy": 730, "w": 74,  "h": 104, "row": 3},
+    {"id": "varuna",         "mode": "key", "ellipse": true, "cx": 70,  "cy": 590, "w": 74,  "h": 112, "row": 3},
+    {"id": "vayu",           "mode": "key", "ellipse": true, "cx": 218, "cy": 500, "w": 66,  "h": 98,  "row": 3},
+
+    {"id": "brahma_zenith",  "mode": "key", "ellipse": true, "cx": 452, "cy": 166, "w": 80,  "h": 118, "row": 4},
+    {"id": "vishnu_nadir",   "mode": "key", "ellipse": true, "cx": 452, "cy": 1115, "w": 80, "h": 118, "row": 4}
+  ]
+}

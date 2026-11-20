@@ -14,6 +14,7 @@ signal sensitivity_changed(value: float)
 signal subtitles_changed(on: bool)
 signal speed_changed(speed: float)
 signal om_gold_changed(gold: bool)
+signal version_changed(version: int)
 
 const CONFIG_PATH := "user://practice.cfg"
 const MAIN_MENU_SCENE := "res://src/app/App.tscn"
@@ -38,6 +39,11 @@ const KEYS := [
 ]
 
 var _titles: Array[String] = []
+## Названия этапов каждой версии практики; выбранная версия запоминается
+var _titles_by_version := {}
+var _version := 1
+var _version_buttons := {}
+var _stage_list: VBoxContainer
 var _config := ConfigFile.new()
 var _screen: Control
 var _pause_note: Label
@@ -61,11 +67,16 @@ var _speed := 1.0
 var _om_gold := false
 var _om_buttons: Array[Button] = []
 
-func setup(titles: Array[String], sensitivity: float, show_text: bool) -> void:
-	_titles = titles
+## titles — {версия: названия этапов}; forced_version > 0 — эта версия вместо запомненной
+func setup(titles: Dictionary, forced_version: int, sensitivity: float, show_text: bool) -> void:
+	_titles_by_version = titles
+	_config.load(CONFIG_PATH)
+	_version = forced_version if forced_version > 0 else _config.get_value("practice", "version", 1)
+	if not titles.has(_version):
+		_version = 1
+	_titles = titles[_version]
 	layer = 10
 	_build()
-	_config.load(CONFIG_PATH)
 	_volume.value = _config.get_value("practice", "volume", 1.0)
 	_sensitivity.value = _config.get_value("practice", "sensitivity", sensitivity)
 	_detail.value = _config.get_value("practice", "detail", 1.0)
@@ -81,6 +92,8 @@ func setup(titles: Array[String], sensitivity: float, show_text: bool) -> void:
 	_om_gold = _config.get_value("practice", "om_gold", false)
 	_om_buttons[1 if _om_gold else 0].button_pressed = true
 	om_gold_changed.emit(_om_gold)
+	_version_buttons[_version].set_pressed_no_signal(true)
+	version_changed.emit(_version)
 
 func is_open() -> bool:
 	return _screen.visible
@@ -136,6 +149,7 @@ func _save() -> void:
 	_config.set_value("practice", "detail", _detail.value)
 	_config.set_value("practice", "subtitles", _subtitles.button_pressed)
 	_config.set_value("practice", "om_gold", _om_gold)
+	_config.set_value("practice", "version", _version)
 	_config.save(CONFIG_PATH)
 
 func _clock(t: float) -> String:
@@ -262,13 +276,49 @@ func _build_stage_list() -> Control:
 	var col := VBoxContainer.new()
 	col.custom_minimum_size.x = 500.0
 	col.add_theme_constant_override("separation", 5)
-	col.add_child(_label("Этапы", 24, GOLD))
+	# версия практики: первая — по первым записям, новая — по новому сценарию
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
+	var title := _label("Этапы", 24, GOLD)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title)
+	var group := ButtonGroup.new()
+	for v: int in _titles_by_version:
+		var b := _button("Старая версия" if v == 1 else "Новая версия", _set_version.bind(v))
+		b.toggle_mode = true
+		b.button_group = group
+		b.add_theme_font_size_override("font_size", 18)
+		_version_buttons[v] = b
+		head.add_child(b)
+	col.add_child(head)
+	_stage_list = VBoxContainer.new()
+	_stage_list.add_theme_constant_override("separation", 4)
+	col.add_child(_stage_list)
+	_fill_stage_list()
+	return col
+
+## Кнопки этапов выбранной версии; при 10 этапах и больше — мельче, чтобы меню помещалось в экран
+func _fill_stage_list() -> void:
+	for b in _stage_buttons:
+		b.queue_free()
+	_stage_buttons.clear()
+	_current_stage = -1
+	var compact := _titles.size() > 9
 	for i in _titles.size():
 		var b := _button(_titles[i], stage_picked.emit.bind(i))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		if compact:
+			b.add_theme_font_size_override("font_size", 18)
 		_stage_buttons.append(b)
-		col.add_child(b)
-	return col
+		_stage_list.add_child(b)
+
+func _set_version(version: int) -> void:
+	if version == _version:
+		return
+	_version = version
+	_titles = _titles_by_version[version]
+	_fill_stage_list()
+	version_changed.emit(version)
 
 func _build_help() -> Control:
 	var col := VBoxContainer.new()
