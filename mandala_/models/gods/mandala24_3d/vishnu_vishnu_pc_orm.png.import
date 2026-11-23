@@ -2,20 +2,20 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://mplb14ojvs3t"
-path.s3tc="res://.godot/imported/vishnu_vishnu_basecolor_crown_refined.png-492612e3f4a9591dbca4e1a4a0d4776d.s3tc.ctex"
+uid="uid://mj6xfstkqwg5"
+path.s3tc="res://.godot/imported/vishnu_vishnu_pc_orm.png-75834fb929f5a15506f829fbb2d35dce.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "4f99623d56caf3f5e6c632b22dbf9ea7"
+"md5": "5398a255357107f719550c6104a7cb39"
 }
 
 [deps]
 
-source_file="res://models/gods/mandala24_3d/vishnu_vishnu_basecolor_crown_refined.png"
-dest_files=["res://.godot/imported/vishnu_vishnu_basecolor_crown_refined.png-492612e3f4a9591dbca4e1a4a0d4776d.s3tc.ctex"]
+source_file="res://models/gods/mandala24_3d/vishnu_vishnu_pc_orm.png"
+dest_files=["res://.godot/imported/vishnu_vishnu_pc_orm.png-75834fb929f5a15506f829fbb2d35dce.s3tc.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
-compress/normal_map=0
+compress/normal_map=2
 compress/channel_pack=0
 mipmaps/generate=true
 mipmaps/limit=-1
