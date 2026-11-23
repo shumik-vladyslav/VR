@@ -12,6 +12,9 @@ extends Node3D
 
 const Kit := preload("res://src/mandala24_3d/deity_kit.gd")
 const GLOW_SHADER := preload("res://src/practice/figure_glow.gdshader")
+const FLASH_SHADER := preload("res://src/mandala24_3d/appear_flash.gdshader")
+const SPLASH_SHADER := preload("res://src/mandala24_3d/splash_bg.gdshader")
+const OM_TEX := preload("res://images/om_big.png")
 
 ## Пол-янтра нарисована в метрах для квадрата 13 м; в сцене она во столько раз больше
 const FLOOR_SCALE := 2.2
@@ -72,7 +75,13 @@ const POSES := [
 const REVEAL_START := 0.8
 const REVEAL_GROUP_STEP := 2.2
 const REVEAL_ITEM_STEP := 0.25
-const REVEAL_FADE := 1.6
+## Вспышка появления (с от начала появления фигуры): разгорается, в её силе фигура проступает, потом гаснет
+const FLASH_UP := 0.55
+const FIGURE_IN := Vector2(0.3, 0.9)
+const FLASH_DOWN := Vector2(0.85, 2.0)
+## Заставка: сколько кадров «прогревать» фигуры за ней (первый показ модели в Godot 4.3 тормозит — компиляция шейдеров)
+const PREWARM_FRAMES := 8
+const SPLASH_FADE := 1.0
 ## как быстро фигура поворачивается к идущему (доля за секунду)
 const TURN_SPEED := 1.5
 
@@ -85,6 +94,7 @@ var _figures: Array[Node3D] = []
 var _meshes: Array = []          # у каждой фигуры — её меши (для проявления прозрачностью)
 var _labels: Array[Label3D] = []
 var _glows: Array[MeshInstance3D] = []
+var _flashes: Array[MeshInstance3D] = []
 var _base_pos: Array[Vector3] = []
 var _own_yaw: Array[float] = []  # куда фигура смотрит сама — наружу, в свою сторону света
 var _appear_at: Array[float] = []
@@ -95,13 +105,20 @@ var _labels_on := true
 var _face_viewer := false  # фигуры стоят неподвижно, каждая смотрит в свою сторону света; F — поворачивать к вам
 var _loaded := false
 var _pending: Array[String] = []
+var _prewarm := 0             # сколько кадров ещё показывать фигуры за заставкой
+var _splash: Control = null   # заставка загрузки: фон и вращающийся Ом
+var _splash_om: TextureRect
+var _splash_fading := false
+var _splash_t := 0.0
 
 var _pos := Vector3.ZERO
 var _yaw := 0.0
 var _pitch := 0.0
 var _frames := 0
-## проверочный запуск (кадры в PNG): мышь не захватывается, фигуры грузятся сразу
+## проверочный запуск (кадры в PNG): мышь не захватывается, фигуры грузятся сразу;
+## M24_T=секунды — с какого времени появления начать, M24_LOADING=1 — показывать только заставку
 var _test_run := OS.has_environment("M24_SHOWN")
+var _hold_loading := OS.has_environment("M24_LOADING")
 
 func _ready() -> void:
 	_floor.scale = Vector3(FLOOR_SCALE, 1.0, FLOOR_SCALE)
@@ -118,36 +135,86 @@ func _ready() -> void:
 	if not _test_run:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_apply_camera()
-	# модели тяжёлые (десятки МБ) — грузятся в фоне, пока виден пол-янтра
+	_loading.visible = false
+	if not _test_run or _hold_loading:
+		_make_splash()
+	# модели тяжёлые (десятки МБ) — грузятся в фоне, пока видна заставка
 	for p in Kit.scene_paths(DEITIES.map(func(d): return d[0])):
 		if not _test_run:
 			ResourceLoader.load_threaded_request(p)
 		_pending.append(p)
-	if _test_run:
+	if _test_run and not _hold_loading:
 		_finish_loading()
-		_time = 1000.0
+		_prewarm = 0
+		_time = float(OS.get_environment("M24_T")) if OS.has_environment("M24_T") else 1000.0
 	_apply()
 
 func _exit_tree() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
+## Заставка загрузки: фиолетовый фон с сиянием и медленно вращающийся лотос с Ом
+func _make_splash() -> void:
+	var layer: CanvasLayer = _loading.get_parent()
+	layer.layer = 10
+	_splash = Control.new()
+	_splash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(_splash)
+	_splash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var bg := ColorRect.new()
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var m := ShaderMaterial.new()
+	m.shader = SPLASH_SHADER
+	bg.material = m
+	_splash.add_child(bg)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_splash_om = TextureRect.new()
+	_splash_om.texture = OM_TEX
+	_splash_om.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_splash_om.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_splash_om.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_splash_om.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_splash.add_child(_splash_om)
+	_splash_om.set_anchors_preset(Control.PRESET_CENTER)
+	var half := 140.0
+	_splash_om.offset_left = -half
+	_splash_om.offset_top = -half
+	_splash_om.offset_right = half
+	_splash_om.offset_bottom = half
+	_splash_om.pivot_offset = Vector2(half, half)
+
+func _update_splash(delta: float) -> void:
+	if _splash == null:
+		return
+	_splash_t += delta
+	# Ом — треть высоты экрана при любом разрешении
+	var half := get_viewport().get_visible_rect().size.y * 0.17
+	_splash_om.offset_left = -half
+	_splash_om.offset_top = -half
+	_splash_om.offset_right = half
+	_splash_om.offset_bottom = half
+	_splash_om.pivot_offset = Vector2(half, half)
+	_splash_om.scale = Vector2.ONE
+	if _splash_fading:
+		var k := clampf(_time / SPLASH_FADE, 0.0, 1.0)
+		_splash.modulate.a = 1.0 - smoothstep(0.0, 1.0, k)
+		_splash_om.scale *= 1.0 + 0.25 * k  # Ом чуть раскрывается, пока заставка тает
+		if k >= 1.0:
+			_splash.queue_free()
+			_splash = null
+
 func _check_loading() -> void:
-	var done := 0
 	for p in _pending:
 		var st := ResourceLoader.load_threaded_get_status(p)
-		if st == ResourceLoader.THREAD_LOAD_LOADED or st == ResourceLoader.THREAD_LOAD_FAILED or st == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
-			done += 1
-	_loading.text = "Загрузка божеств… %d / %d" % [done, _pending.size()]
-	if done == _pending.size():
-		for p in _pending:
-			ResourceLoader.load_threaded_get(p)
-		_finish_loading()
-		_time = 0.0
+		if st == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return
+	for p in _pending:
+		ResourceLoader.load_threaded_get(p)
+	_finish_loading()
 
 func _finish_loading() -> void:
 	_loaded = true
-	_loading.get_parent().visible = false
 	_build_figures()
+	_prewarm = PREWARM_FRAMES
 
 func _build_figures() -> void:
 	var counter := {}
@@ -199,6 +266,19 @@ func _build_figures() -> void:
 		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(g)
 		_glows.append(g)
+
+		# вспышка появления — перед фигурой, со стороны зрителя
+		var fl := MeshInstance3D.new()
+		var fq := QuadMesh.new()
+		fq.size = Vector2(h * 1.7, h * 1.7)
+		fl.mesh = fq
+		var fm := ShaderMaterial.new()
+		fm.shader = FLASH_SHADER
+		fm.set_shader_parameter("seed", fmod(float(i) * 0.371, 1.0))
+		fl.material_override = fm
+		fl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(fl)
+		_flashes.append(fl)
 
 		# подпись — над фигурой
 		var l := Label3D.new()
@@ -261,11 +341,43 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	_frames += 1
-	if not _loaded:
+	if not _loaded and not _hold_loading:
 		_check_loading()
 	_time += delta
+	if _prewarm > 0:
+		_prewarm -= 1
+		if _prewarm == 0:
+			# всё уже показано один раз — заставка тает, мандала проявляется с начала
+			_splash_fading = true
+			_time = 0.0
+	_update_splash(delta)
 	_move(delta)
-	_apply(delta)
+	if _prewarm > 0:
+		_show_for_prewarm()
+	else:
+		_apply(delta)
+
+## За заставкой: все фигуры, сияния, вспышки и подписи — прямо перед камерой, через кадр то прозрачные, то нет,
+## чтобы Godot заранее собрал все их шейдеры и потом при появлении ничего не дорисовывалось кусками
+func _show_for_prewarm() -> void:
+	var b := _camera.global_transform.basis
+	var half := _prewarm % 2 == 0
+	for i in _figures.size():
+		var p := _pos - b.z * 14.0 + b.x * (float(i % 6) - 2.5) * 3.0 + b.y * (float(i / 6) - 2.0) * 2.5
+		var f := _figures[i]
+		f.visible = true
+		f.global_position = p
+		for m in _meshes[i]:
+			(m as GeometryInstance3D).transparency = 0.5 if half else 0.0
+		_faded[i] = true
+		_glows[i].visible = true
+		_glows[i].global_position = p
+		(_glows[i].material_override as ShaderMaterial).set_shader_parameter("glow_strength", 0.01)
+		_flashes[i].visible = true
+		_flashes[i].global_position = p
+		(_flashes[i].material_override as ShaderMaterial).set_shader_parameter("intensity", 0.01)
+		_labels[i].visible = true
+		_labels[i].global_position = p
 
 func _move(delta: float) -> void:
 	if _menu.IsOpened:
@@ -304,7 +416,10 @@ func _apply_camera() -> void:
 func _apply(delta := 0.0) -> void:
 	_floor.material_override.set_shader_parameter("reveal", smoothstep(0.0, 1.5, _time if _loaded else 0.0))
 	for i in _figures.size():
-		var a := smoothstep(0.0, 1.0, clampf((_time - _appear_at[i]) / REVEAL_FADE, 0.0, 1.0))
+		# фигура проступает внутри вспышки: пока она полупрозрачна, вспышка в полной силе и закрывает её
+		var t := _time - _appear_at[i]
+		var a := smoothstep(FIGURE_IN.x, FIGURE_IN.y, t)
+		var flash := smoothstep(0.0, FLASH_UP, t) * (1.0 - smoothstep(FLASH_DOWN.x, FLASH_DOWN.y, t))
 		var f := _figures[i]
 		f.visible = a > 0.002
 		# проявление: прозрачность мешей, пока фигура проступает; потом — обычная непрозрачная (дешевле и без ошибок сортировки)
@@ -329,7 +444,17 @@ func _apply(delta := 0.0) -> void:
 		g.position = f.position + Vector3(0, h * 0.55, 0) - Vector3(sin(f.rotation.y), 0, cos(f.rotation.y)) * 0.6
 		var breath := 0.85 + 0.15 * sin(_time * 0.18 + float(i) * 2.3)
 		(g.material_override as ShaderMaterial).set_shader_parameter("glow_strength", a * 0.35 * breath)
+		var fl := _flashes[i]
+		fl.visible = flash > 0.002
+		if fl.visible:
+			# центр вспышки — середина фигуры, чуть ближе к зрителю, чтобы фигура её не загораживала
+			var mid := f.position + Vector3(0, h * 0.5, 0)
+			var to_cam := _pos - mid
+			to_cam.y = 0.0
+			fl.position = mid + (to_cam.normalized() * 0.8 if to_cam.length() > 0.01 else Vector3.ZERO)
+			(fl.material_override as ShaderMaterial).set_shader_parameter("intensity", flash * 1.25)
 		var l := _labels[i]
+		l.position = _base_pos[i] + Vector3(0, h + 0.35, 0)
 		l.visible = _labels_on and f.visible
 		l.modulate.a = a
 		l.outline_modulate.a = a * 0.85
