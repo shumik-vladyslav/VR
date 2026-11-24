@@ -81,8 +81,19 @@ const FLASH_UP := 0.55
 const FIGURE_IN := Vector2(0.3, 0.9)
 const FLASH_DOWN := Vector2(0.85, 2.0)
 ## Заставка: сколько кадров «прогревать» фигуры за ней (первый показ модели в Godot 4.3 тормозит — компиляция шейдеров)
-const PREWARM_FRAMES := 8
+const PREWARM_FRAMES := 4
+## сколько кадров показывать за заставкой каждую только что собранную фигуру (через кадр прозрачную и нет)
+const WARM_FRAMES := 4
 const SPLASH_FADE := 1.0
+## сколько времени кадра (мкс) можно тратить на сборку фигур за заставкой
+const BUILD_BUDGET_US := 12000
+## не больше стольких фигур за кадр: в следующем кадре Godot собирает их шейдеры — пусть понемногу
+const BUILD_PER_FRAME := 2
+## фоновую загрузку начинаем через несколько кадров — когда заставка уже на экране
+const LOAD_AFTER_FRAMES := 3
+## самый большой шаг времени анимаций за кадр: после подвисания лучи и проявление продолжаются плавно, а не прыгают вперёд
+const MAX_STEP := 1.0 / 30.0
+const PARTS_DIR := "res://images/mandala24/parts/"
 ## как быстро фигура поворачивается к идущему (доля за секунду)
 const TURN_SPEED := 1.5
 
@@ -106,6 +117,12 @@ var _labels_on := true
 var _face_viewer := false  # фигуры стоят неподвижно, каждая смотрит в свою сторону света; F — поворачивать к вам
 var _loaded := false
 var _pending: Array[String] = []
+var _keep: Array = []            # загруженные в фоне модели и картинки — держим, чтобы Godot их не выгрузил
+var _prof_done := {}
+var _build_next := 0             # какую фигуру собирать следующей
+var _warm_left: Array[int] = []  # сколько кадров ещё показывать фигуру за заставкой
+var _counter := {}               # сколько фигур каждого круга уже собрано (для очереди появления)
+var _splash_mat: ShaderMaterial
 var _prewarm := 0             # сколько кадров ещё показывать фигуры за заставкой
 var _splash: Control = null   # заставка загрузки: фон и вращающийся Ом
 var _splash_om: TextureRect
@@ -128,6 +145,10 @@ var _pitch_target := 999.0      # куда плавно наклонить вз�
 ## M24_T=секунды — с какого времени появления начать, M24_LOADING=1 — показывать только заставку
 var _test_run := OS.has_environment("M24_SHOWN")
 var _hold_loading := OS.has_environment("M24_LOADING")
+## M24_PROFILE=1 — обычный запуск (без захвата мыши), в консоль пишутся долгие кадры и этапы загрузки
+var _profile := OS.has_environment("M24_PROFILE")
+var _prof_last := 0
+
 
 func _ready() -> void:
 	_floor.scale = Vector3(FLOOR_SCALE, 1.0, FLOOR_SCALE)
@@ -143,24 +164,29 @@ func _ready() -> void:
 		_face_viewer = false
 	if OS.has_environment("M24_FLY"):  # проверка взлёта: как будто сразу нажали пробел
 		_toggle_flight()
-	if not _test_run:
+	if not _test_run and not _profile:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_apply_camera()
 	_loading.visible = false
 	if not _test_run or _hold_loading:
 		_make_splash()
-	# модели тяжёлые (десятки МБ) — грузятся в фоне, пока видна заставка
-	for p in Kit.scene_paths(DEITIES.map(func(d): return d[0])):
-		if not _test_run:
-			ResourceLoader.load_threaded_request(p)
+	# модели тяжёлые (десятки МБ) и картинки — грузятся в фоне, пока видна заставка
+	var ids: Array = DEITIES.map(func(d): return d[0])
+	var paths: Array[String] = Kit.scene_paths(ids)
+	for id in ids:
+		if not Kit.has_model(id) and ResourceLoader.exists(PARTS_DIR + id + ".png"):
+			paths.append(PARTS_DIR + id + ".png")
+	# сами запросы — в _process, когда заставка уже нарисована (иначе первые кадры подвисают ещё до неё)
+	for p in paths:
 		_pending.append(p)
 	if _test_run and not _hold_loading:
-		_finish_loading()
+		_finish_loading(true)
 		_prewarm = 0
 		_time = float(OS.get_environment("M24_T")) if OS.has_environment("M24_T") else 1000.0
 	_apply()
 
 func _exit_tree() -> void:
+	get_viewport().disable_3d = false  # окно общее для всех сцен
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 ## Заставка загрузки: фиолетовый фон с сиянием и медленно вращающийся лотос с Ом
@@ -173,9 +199,9 @@ func _make_splash() -> void:
 	_splash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var m := ShaderMaterial.new()
-	m.shader = SPLASH_SHADER
-	bg.material = m
+	_splash_mat = ShaderMaterial.new()
+	_splash_mat.shader = SPLASH_SHADER
+	bg.material = _splash_mat
 	_splash.add_child(bg)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_splash_om = TextureRect.new()
@@ -196,7 +222,8 @@ func _make_splash() -> void:
 func _update_splash(delta: float) -> void:
 	if _splash == null:
 		return
-	_splash_t += delta
+	_splash_t += minf(delta, MAX_STEP)
+	_splash_mat.set_shader_parameter("t", _splash_t)
 	# Ом — треть высоты экрана при любом разрешении
 	var half := get_viewport().get_visible_rect().size.y * 0.17
 	_splash_om.offset_left = -half
@@ -213,100 +240,134 @@ func _update_splash(delta: float) -> void:
 			_splash.queue_free()
 			_splash = null
 
+## Модели грузятся в фоне все разом (по одной выходит в разы дольше, а подвисания те же: их дают сами тяжёлые модели,
+## когда Godot передаёт их текстуры и меши в видеокарту в главном потоке)
 func _check_loading() -> void:
+	var waiting := false
 	for p in _pending:
 		var st := ResourceLoader.load_threaded_get_status(p)
 		if st == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-			return
+			waiting = true
+		elif _profile and not _prof_done.has(p):
+			_prof_done[p] = true
+			_prof("готово: " + p.get_file())
+	if waiting:
+		return
+	_prof("модели загружены в фоне")
+	# держим загруженное у себя: кэш Godot хранит ресурс, только пока на него есть ссылка,
+	# иначе он освободится и при сборке фигур загрузится с диска ещё раз — уже без фона
 	for p in _pending:
-		ResourceLoader.load_threaded_get(p)
+		_keep.append(ResourceLoader.load_threaded_get(p))
+	# дальше фигуры собираются и прогреваются за заставкой — для этого нужен 3D
+	get_viewport().disable_3d = false
 	_finish_loading()
 
-func _finish_loading() -> void:
+## all_at_once — собрать все фигуры сразу (проверочный кадр); иначе по нескольку за кадр, чтобы заставка не замирала
+func _finish_loading(all_at_once := false) -> void:
 	_loaded = true
-	_build_figures()
+	if all_at_once:
+		while _build_next < DEITIES.size():
+			_build_figure(_build_next)
+			_build_next += 1
 	_prewarm = PREWARM_FRAMES
 
-func _build_figures() -> void:
-	var counter := {}
-	for i in DEITIES.size():
-		var d: Array = DEITIES[i]
-		var id: String = d[0]
-		var base: Vector3 = d[2]
-		var h: float = d[3]
-		var group: int = d[4]
+## Собрать следующие фигуры, пока не истекло время кадра (хотя бы одну)
+func _build_some() -> void:
+	var t0 := Time.get_ticks_usec()
+	var built := 0
+	while _build_next < DEITIES.size() and built < BUILD_PER_FRAME and (built == 0 or Time.get_ticks_usec() - t0 < BUILD_BUDGET_US):
+		built += 1
+		var t := Time.get_ticks_usec()
+		_build_figure(_build_next)
+		if Time.get_ticks_usec() - t > 20000:
+			_prof("фигура %s собиралась %d мс" % [DEITIES[_build_next][0], (Time.get_ticks_usec() - t) / 1000])
+		_build_next += 1
+	if _build_next >= DEITIES.size():
+		_prof("все фигуры собраны")
 
-		# фигура: рост h, низ — в точке base, середина по xz — над ней
-		var model := Kit.build(id)
-		_is_picture.append(model == null)
-		if model == null:
-			model = _picture(id, h)
-		else:
-			var b := Kit.bounds(model)
-			var s := h / maxf(b.size.y, 0.001)
-			model.transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * s),
-				Vector3(-b.get_center().x * s, -b.position.y * s, -b.get_center().z * s))
-		var f := Node3D.new()
-		f.name = id
-		f.position = base
-		f.add_child(model)
-		add_child(f)
-		var flat := Vector2(base.x, base.z)
-		var own := atan2(base.x, base.z) if flat.length() > 0.1 else 0.0
-		f.rotation.y = own
-		_figures.append(f)
-		_base_pos.append(base)
-		_own_yaw.append(own)
-		var ms: Array = []
-		for c in model.find_children("*", "GeometryInstance3D", true, false):
-			ms.append(c)
-		_meshes.append(ms)
-		_faded.append(true)
+func _prof(msg: String) -> void:
+	if _profile:
+		print("[M24 %6d мс, кадр %d] %s" % [Time.get_ticks_msec(), _frames, msg])
 
-		# лучи сияния за фигурой — тот же шейдер, что у древа Прибежища
-		var g := MeshInstance3D.new()
-		var q := QuadMesh.new()
-		var size := h * 1.9
-		q.size = Vector2(size, size)
-		g.mesh = q
-		var mat := ShaderMaterial.new()
-		mat.shader = GLOW_SHADER
-		mat.set_shader_parameter("figure_seed", fmod(float(i) * 0.618034, 1.0))
-		mat.set_shader_parameter("figure_radius", 0.42)
-		g.material_override = mat
-		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(g)
-		_glows.append(g)
+func _build_figure(i: int) -> void:
+	var d: Array = DEITIES[i]
+	var id: String = d[0]
+	var base: Vector3 = d[2]
+	var h: float = d[3]
+	var group: int = d[4]
 
-		# вспышка появления — перед фигурой, со стороны зрителя
-		var fl := MeshInstance3D.new()
-		var fq := QuadMesh.new()
-		fq.size = Vector2(h * 1.7, h * 1.7)
-		fl.mesh = fq
-		var fm := ShaderMaterial.new()
-		fm.shader = FLASH_SHADER
-		fm.set_shader_parameter("seed", fmod(float(i) * 0.371, 1.0))
-		fl.material_override = fm
-		fl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(fl)
-		_flashes.append(fl)
+	# фигура: рост h, низ — в точке base, середина по xz — над ней
+	var model := Kit.build(id)
+	_is_picture.append(model == null)
+	if model == null:
+		model = _picture(id, h)
+	else:
+		var b := Kit.bounds(model)
+		var s := h / maxf(b.size.y, 0.001)
+		model.transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * s),
+			Vector3(-b.get_center().x * s, -b.position.y * s, -b.get_center().z * s))
+	var f := Node3D.new()
+	f.name = id
+	f.position = base
+	f.add_child(model)
+	add_child(f)
+	var flat := Vector2(base.x, base.z)
+	var own := atan2(base.x, base.z) if flat.length() > 0.1 else 0.0
+	f.rotation.y = own
+	_figures.append(f)
+	_base_pos.append(base)
+	_own_yaw.append(own)
+	var ms: Array = []
+	for c in model.find_children("*", "GeometryInstance3D", true, false):
+		ms.append(c)
+	_meshes.append(ms)
+	_faded.append(true)
+	_warm_left.append(WARM_FRAMES)
 
-		# подпись — над фигурой
-		var l := Label3D.new()
-		l.text = d[1]
-		l.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
-		l.font_size = 64
-		l.outline_size = 14
-		l.pixel_size = 0.0038 if group == 2 else 0.0045
-		l.modulate = GROUP_COLOR[group]
-		l.outline_modulate = Color(1, 1, 1, 0.85) if group in [1, 2, 3] else Color(0.25, 0.05, 0.45, 0.9)
-		l.position = base + Vector3(0, h + 0.35, 0)
-		add_child(l)
-		_labels.append(l)
+	# лучи сияния за фигурой — тот же шейдер, что у древа Прибежища
+	var g := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	var size := h * 1.9
+	q.size = Vector2(size, size)
+	g.mesh = q
+	var mat := ShaderMaterial.new()
+	mat.shader = GLOW_SHADER
+	mat.set_shader_parameter("figure_seed", fmod(float(i) * 0.618034, 1.0))
+	mat.set_shader_parameter("figure_radius", 0.42)
+	g.material_override = mat
+	g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(g)
+	_glows.append(g)
 
-		var k: int = counter.get(group, 0)
-		counter[group] = k + 1
-		_appear_at.append(REVEAL_START + group * REVEAL_GROUP_STEP + k * REVEAL_ITEM_STEP)
+	# вспышка появления — перед фигурой, со стороны зрителя
+	var fl := MeshInstance3D.new()
+	var fq := QuadMesh.new()
+	fq.size = Vector2(h * 1.7, h * 1.7)
+	fl.mesh = fq
+	var fm := ShaderMaterial.new()
+	fm.shader = FLASH_SHADER
+	fm.set_shader_parameter("seed", fmod(float(i) * 0.371, 1.0))
+	fl.material_override = fm
+	fl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(fl)
+	_flashes.append(fl)
+
+	# подпись — над фигурой
+	var l := Label3D.new()
+	l.text = d[1]
+	l.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+	l.font_size = 64
+	l.outline_size = 14
+	l.pixel_size = 0.0038 if group == 2 else 0.0045
+	l.modulate = GROUP_COLOR[group]
+	l.outline_modulate = Color(1, 1, 1, 0.85) if group in [1, 2, 3] else Color(0.25, 0.05, 0.45, 0.9)
+	l.position = base + Vector3(0, h + 0.35, 0)
+	add_child(l)
+	_labels.append(l)
+
+	var k: int = _counter.get(group, 0)
+	_counter[group] = k + 1
+	_appear_at.append(REVEAL_START + group * REVEAL_GROUP_STEP + k * REVEAL_ITEM_STEP)
 
 func _go_to(i: int) -> void:
 	var p: Array = POSES[clampi(i, 0, POSES.size() - 1)]
@@ -369,10 +430,26 @@ func _toggle_flight() -> void:
 
 func _process(delta: float) -> void:
 	_frames += 1
-	if not _loaded and not _hold_loading:
-		_check_loading()
-	_time += delta
-	if _prewarm > 0:
+	if _profile:
+		var now := Time.get_ticks_usec()
+		if _prof_last > 0 and now - _prof_last > 25000:
+			var phase := "загрузка" if not _loaded else ("сборка" if _build_next < DEITIES.size() else ("прогрев" if _prewarm > 0 else ("заставка тает" if _splash != null else "сцена")))
+			_prof("долгий кадр %d мс (%s)" % [(now - _prof_last) / 1000, phase])
+		_prof_last = now
+	if not _loaded and not _hold_loading and not _test_run:
+		if _frames == LOAD_AFTER_FRAMES:
+			# первые кадры 3D рисуется за заставкой (собираются шейдеры пола, неба и эффектов), а пока грузятся модели —
+			# не рисуется: за непрозрачной заставкой он незачем, а без него кадры заставки лёгкие и ровные
+			get_viewport().disable_3d = true
+			for p in _pending:
+				ResourceLoader.load_threaded_request(p)
+		elif _frames > LOAD_AFTER_FRAMES:
+			_check_loading()
+	if _loaded and _build_next < DEITIES.size():
+		_build_some()
+	_time += minf(delta, MAX_STEP)
+	# прогрев отсчитывается, когда собраны все фигуры
+	if _prewarm > 0 and _build_next >= DEITIES.size():
 		_prewarm -= 1
 		if _prewarm == 0:
 			# всё уже показано один раз — заставка тает, мандала проявляется с начала
@@ -389,22 +466,27 @@ func _process(delta: float) -> void:
 ## чтобы Godot заранее собрал все их шейдеры и потом при появлении ничего не дорисовывалось кусками
 func _show_for_prewarm() -> void:
 	var b := _camera.global_transform.basis
-	var half := _prewarm % 2 == 0
+	var half := _frames % 2 == 0
 	for i in _figures.size():
-		var p := _pos - b.z * 14.0 + b.x * (float(i % 6) - 2.5) * 3.0 + b.y * (float(i / 6) - 2.0) * 2.5
 		var f := _figures[i]
-		f.visible = true
+		# каждую фигуру — только первые кадры после сборки (шейдеры уже собраны), дальше прячем: так кадры заставки лёгкие
+		var show := _warm_left[i] > 0
+		_warm_left[i] -= 1
+		f.visible = show
+		_glows[i].visible = show
+		_flashes[i].visible = show
+		_labels[i].visible = show
+		_faded[i] = true
+		if not show:
+			continue
+		var p := _pos - b.z * 14.0 + b.x * (float(i % 6) - 2.5) * 3.0 + b.y * (float(i / 6) - 2.0) * 2.5
 		f.global_position = p
 		for m in _meshes[i]:
 			(m as GeometryInstance3D).transparency = 0.5 if half else 0.0
-		_faded[i] = true
-		_glows[i].visible = true
 		_glows[i].global_position = p
 		(_glows[i].material_override as ShaderMaterial).set_shader_parameter("glow_strength", 0.01)
-		_flashes[i].visible = true
 		_flashes[i].global_position = p
 		(_flashes[i].material_override as ShaderMaterial).set_shader_parameter("intensity", 0.01)
-		_labels[i].visible = true
 		_labels[i].global_position = p
 
 func _move(delta: float) -> void:
@@ -509,7 +591,7 @@ func _apply(delta := 0.0) -> void:
 ## Пока у божества нет 3D-фигуры — его картинка (как в мандале с картинками), лицом туда же, куда повёрнута фигура
 func _picture(id: String, h: float) -> Node3D:
 	var root := Node3D.new()
-	var tex: Texture2D = load("res://images/mandala24/parts/" + id + ".png")
+	var tex: Texture2D = load(PARTS_DIR + id + ".png")
 	if tex == null:
 		return root
 	var s := Sprite3D.new()
