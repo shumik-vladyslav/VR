@@ -2,14 +2,14 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://mj6xfstkqwg5"
+uid="uid://covwubunsao6o"
 path.s3tc="res://.godot/imported/vishnu_vishnu_pc_orm.png-75834fb929f5a15506f829fbb2d35dce.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "5398a255357107f719550c6104a7cb39"
+"md5": "c2610fd53cd5d149807f1fb990e903fc"
 }
 
 [deps]
@@ -35,4 +35,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1

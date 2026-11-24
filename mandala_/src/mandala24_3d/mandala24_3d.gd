@@ -6,6 +6,7 @@ extends Node3D
 ##
 ## Стороны света: север — −Z, восток — +X, юг — +Z.
 ## Управление: мышь — смотреть, WASD — идти, Shift — быстрее, E/Q — выше/ниже, стрелки — повернуться,
+## Пробел — взлететь над мандалой / приземлиться (в полёте W/S несут туда, куда смотришь, и быстрее),
 ## 1 — у южных ворот, 2 — перед Даттой, 3 — над мандалой, L — подписи, R — проявить заново,
 ## F — фигуры поворачиваются к вам / стоят неподвижно, каждая смотрит в свою сторону света (так по умолчанию),
 ## Esc — меню (мышь освобождается; щелчок в окне — снова смотреть мышью).
@@ -115,6 +116,14 @@ var _pos := Vector3.ZERO
 var _yaw := 0.0
 var _pitch := 0.0
 var _frames := 0
+## Полёт (пробел): взлёт на FLY_HEIGHT с наклоном взгляда вниз, посадка — на рост человека
+const FLY_HEIGHT := 9.0
+const WALK_HEIGHT := 1.6
+const FLY_SPEED := 2.5          # во сколько раз быстрее, чем пешком
+const FLY_PITCH := -28.0        # куда наклонить взгляд при взлёте (°), если смотрели выше
+var _flying := false
+var _alt_target := -1.0         # куда плавно подняться/опуститься (−1 — никуда)
+var _pitch_target := 999.0      # куда плавно наклонить взгляд (999 — никуда)
 ## проверочный запуск (кадры в PNG): мышь не захватывается, фигуры грузятся сразу;
 ## M24_T=секунды — с какого времени появления начать, M24_LOADING=1 — показывать только заставку
 var _test_run := OS.has_environment("M24_SHOWN")
@@ -132,6 +141,8 @@ func _ready() -> void:
 		_pitch = deg_to_rad(custom[4])
 	if OS.has_environment("M24_FIXED"):
 		_face_viewer = false
+	if OS.has_environment("M24_FLY"):  # проверка взлёта: как будто сразу нажали пробел
+		_toggle_flight()
 	if not _test_run:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_apply_camera()
@@ -302,6 +313,10 @@ func _go_to(i: int) -> void:
 	_pos = p[0]
 	_yaw = deg_to_rad(p[1])
 	_pitch = deg_to_rad(p[2])
+	# «над мандалой» — это полёт, остальные места — пешком
+	_flying = p[0].y > WALK_HEIGHT + 1.0
+	_alt_target = -1.0
+	_pitch_target = 999.0
 	_apply_camera()
 
 func _looking() -> bool:
@@ -338,6 +353,19 @@ func _unhandled_input(event: InputEvent) -> void:
 				_time = 0.0
 			KEY_F:
 				_face_viewer = not _face_viewer
+			KEY_SPACE:
+				_toggle_flight()
+
+func _toggle_flight() -> void:
+	_flying = not _flying
+	if _flying:
+		_alt_target = maxf(_pos.y, FLY_HEIGHT)
+		if rad_to_deg(_pitch) > FLY_PITCH:
+			_pitch_target = deg_to_rad(FLY_PITCH)
+	else:
+		_alt_target = WALK_HEIGHT
+		if _pitch < deg_to_rad(-5.0):
+			_pitch_target = 0.0
 
 func _process(delta: float) -> void:
 	_frames += 1
@@ -399,8 +427,27 @@ func _move(delta: float) -> void:
 	if Input.is_physical_key_pressed(KEY_E): up += 1.0
 	if Input.is_physical_key_pressed(KEY_Q): up -= 1.0
 	var speed := move_speed * (3.0 if Input.is_physical_key_pressed(KEY_SHIFT) else 1.0)
+	if _flying:
+		speed *= FLY_SPEED
 	if dir != Vector3.ZERO:
-		_pos += Basis(Vector3.UP, _yaw) * dir.normalized() * speed * delta
+		# в полёте — туда, куда смотришь (и вверх/вниз), пешком — только по земле
+		var b := Basis.from_euler(Vector3(_pitch, _yaw, 0.0)) if _flying else Basis(Vector3.UP, _yaw)
+		_pos += b * dir.normalized() * speed * delta
+	# плавный взлёт / посадка; E/Q или стрелки вверх-вниз перехватывают управление
+	if up != 0.0:
+		_alt_target = -1.0
+	if tilt != 0.0:
+		_pitch_target = 999.0
+	if _alt_target >= 0.0:
+		var k := clampf(delta * 1.6, 0.0, 1.0)
+		_pos.y = lerpf(_pos.y, _alt_target, k)
+		_pos.y = move_toward(_pos.y, _alt_target, delta * 0.3)
+		if absf(_pos.y - _alt_target) < 0.01:
+			_alt_target = -1.0
+	if _pitch_target < 900.0:
+		_pitch = lerp_angle(_pitch, _pitch_target, clampf(delta * 1.8, 0.0, 1.0))
+		if absf(_pitch - _pitch_target) < 0.003:
+			_pitch_target = 999.0
 	_pos.y = clampf(_pos.y + up * speed * delta, min_height, max_height)
 	# не уходить далеко от мандалы
 	var flat := Vector2(_pos.x, _pos.z)
